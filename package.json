@@ -15,6 +15,9 @@
     "discordapp"
   ],
   "author": "Karar Al-Remahy",
+  "contributors": [
+    { "name": "Tonkku107", "url": "https://github.com/tonkku107/" }
+  ],
   "license": "MIT",
   "dependencies": {
     "discord.js": "^11.1.0"
