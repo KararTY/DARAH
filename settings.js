@@ -1,6 +1,6 @@
 module.exports = {
-  auto: false,
-  debug: true,
+  auto: true,
+  debug: false,
   CRON: '0 * */1 * *',
   authtoken: '',
   guildID: ''
