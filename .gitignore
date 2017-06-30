@@ -20,6 +20,9 @@ coverage
 # nyc test coverage
 .nyc_output
 
+# VSCode
+.vscode/
+
 # Grunt intermediate storage (http://gruntjs.com/creating-plugins#storing-task-files)
 .grunt
 
@@ -57,3 +60,6 @@ typings/
 # dotenv environment variables file
 .env
 
+# Archive folder(s)
+archive*/
+temp/
