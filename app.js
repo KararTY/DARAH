@@ -23,8 +23,12 @@ let object = {}
 
 let disconnected = false
 
+const debug = (...args) => {
+  if (settings.debug) console.log(...args)
+}
+
 const cleanTempDir = () => {
-  if (!fs.existsSync(path.join(__dirname, 'temp'))) return console.log('No temp directory found.')
+  if (!fs.existsSync(path.join(__dirname, 'temp'))) return debug('No temp directory found.')
   fs.readdirSync(path.join(__dirname, 'temp')).forEach((file, index) => {
     var curPath = path.join(__dirname, 'temp', file)
     fs.unlinkSync(curPath)
@@ -46,12 +50,12 @@ const run = (auto) => {
   Promise.all(client.guilds.get(guildID)
   .channels.map(channel => {
     if (channel.permissionsFor(client.user.id).has('READ_MESSAGES') && channel.permissionsFor(client.user.id).has('READ_MESSAGE_HISTORY') && channel.type === 'text') {
-      if (settings.debug) console.log(channel.id, channel.name)
+      debug(channel.id, channel.name)
       object[channel.id] = {}
       return fetchMore(channel)
     }
   })).then(() => {
-    if (settings.debug) console.log('Starting compression! Please wait, this may take time.')
+    debug('Starting compression! Please wait, this may take time.')
     let output = fs.createWriteStream(path.join(__dirname, 'archive', `archive_${Date.now()}.zip`))
     output.on('close', () => {
       console.log('Finished archiving!', Date().toString())
@@ -68,25 +72,22 @@ const run = (auto) => {
 
 if (settings.guildID === '') throw new Error('No guildID provided in settings.js')
 if (settings.authtoken === '') throw new Error('No authtoken provided in settings.js')
+
 client.once('ready', () => {
   console.log('Logged into Discord.')
   if (settings.auto) {
-    try {
-      let interval = parser.parseExpression(settings.CRON)
-      console.log('#1 will run at:', interval.next().toString())
-      console.log('#2 will run at:', interval.next().toString(), '\netc. etc.')
-      schedule.scheduleJob(settings.CRON, () => {
-        console.log('Starting...', Date().toString())
-        cleanTempDir()
-        run(true)
-      })
-    } catch (error) {
-      throw error
-    }
+    let interval = parser.parseExpression(settings.CRON)
+    console.log('#1 will run at:', interval.next().toString())
+    console.log('#2 will run at:', interval.next().toString(), '\netc. etc.')
+    schedule.scheduleJob(settings.CRON, () => {
+      console.log('Starting...', Date().toString())
+      cleanTempDir()
+      run(true)
+    })
   } else {
     console.log('Running one-timer...')
     cleanTempDir()
-    run(false)
+    run()
   }
 })
 
@@ -99,12 +100,12 @@ const fetchMore = (channel, before) => {
           // Check https://discord.js.org/#/docs/main/stable/class/Message to see what you can archive.
           object[channel.id][msg.createdTimestamp] = {in: {id: msg.channel.id, name: msg.channel.name}, msgId: msg.id, user: {id: msg.author.id, name: msg.author.username}, content: {message: msg.cleanContent, attachment: msg.attachments.size ? msg.attachments.first().url : undefined}}
         })
-        if (settings.debug) console.log(msgLast) // Used to let you know that it's still going.
+        debug(msgLast) // Used to let you know that it's still going.
         fetchMore(channel, msgLast).then(resolve, reject)
       } else {
         fs.writeFile(path.join(__dirname, 'temp', `${channel.id}.json`), JSON.stringify(object[channel.id], null, 2), (err) => {
           if (err) throw err
-          if (settings.debug) console.log('Finished:', channel.id)
+          debug('Finished:', channel.id)
           resolve()
         })
       }
