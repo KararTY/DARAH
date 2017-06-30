@@ -11,7 +11,7 @@ module.exports = {
   auto: true, // Will run automatically on a schedule based on 'CRON'.
   debug: true, // Will display debug related messages to your console. (Really spammy.)
   CRON: '0 * */1 * *', // This example 'CRON' will run script every midnight.
-  authtoken: '', // Please use bot accounts.
+  authtoken: '', // Please use a bot account.
   guildID: '' // (Developer mode) Right click your server icon and click 'Copy ID'.
 }
 // Cron help http://crontab.guru/ (Check this site out to see examples on scheduling)
@@ -23,4 +23,4 @@ module.exports = {
 ### Contributing
 Fork project & Send a pull request. JS Standard Style is preferred.
 
-### License MIT Karar Al-Remahy
+### License MIT

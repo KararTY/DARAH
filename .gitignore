@@ -63,3 +63,6 @@ typings/
 # Archive folder(s)
 archive*/
 temp/
+
+# Settings
+settings.js
