@@ -61,7 +61,7 @@ typings/
 .env
 
 # Archive folder(s)
-archive*/
+archive/
 temp/
 
 # Settings
