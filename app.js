@@ -12,6 +12,8 @@ const path = require('path')
 const parser = require('cron-parser')
 const settings = require('./settings.js')
 
+const interval = parser.parseExpression(settings.CRON)
+
 if (settings.guildID === '') throw new Error('No guildID provided in settings.js')
 if (settings.authtoken === '') throw new Error('No authtoken provided in settings.js')
 
@@ -73,7 +75,6 @@ function run () {
 }
 
 function timer () {
-  let interval = parser.parseExpression(settings.CRON)
   setTimeout(() => {
     console.log('Starting...', Date().toString())
     cleanTempDir()
