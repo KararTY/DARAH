@@ -201,9 +201,9 @@ function start () {
         memberCount: guild.memberCount,
         createdTimestamp: guild.createdTimestamp,
         afk: {
-          channel: guild.afkChannel,
-          timeout: guild.afkTimeout,
-          channelId: guild.afkChannelID
+          exists: guild.afkChannelId !== null,
+          id: guild.afkChannel.id,
+          timeout: guild.afkTimeout
         },
         owner: {
           id: guild.owner.id,
@@ -297,6 +297,7 @@ function start () {
               if (err) throw err
               console.log('Saved split for channel', channel.id, 'at', counter[channel.id].count)
               object[channel.id] = [] // Reset
+              people[channel.id] = {} // Reset
               fetchMore(channel, msgLast.id).then(resolve, reject)
             })
           } else fetchMore(channel, msgLast.id).then(resolve, reject)
