@@ -273,7 +273,14 @@ function start () {
               }
               let firstMention
               if (!people[channel.id][msg.author.id]) {
-                people[channel.id][msg.author.id] = { id: msg.author.id, avatar: msg.author.displayAvatarURL, isBot: msg.author.bot, createdTimestamp: msg.author.createdTimestamp, name: msg.author.username, tag: msg.author.tag }
+                people[channel.id][msg.author.id] = {
+                  id: msg.author.id,
+                  avatar: msg.author.displayAvatarURL,
+                  isBot: msg.author.bot,
+                  createdTimestamp: msg.author.createdTimestamp,
+                  name: msg.author.username,
+                  tag: msg.author.tag
+                }
                 firstMention = people[channel.id][msg.author.id]
               }
               let edits = []
@@ -284,7 +291,21 @@ function start () {
                 })
               }
               */
-              object[channel.id].push({timestamp: msg.createdTimestamp, in: {id: msg.channel.id, name: msg.channel.name}, msgId: msg.id, user: firstMention || {id: msg.author.id, name: msg.author.username}, content: {message: msg.cleanContent, attachments: attachments.length ? attachments : undefined}, pinned: msg.pinned ? true : undefined, edits: edits.length ? edits : undefined})
+              object[channel.id].push({
+                timestamp: msg.createdTimestamp,
+                in: {
+                  id: msg.channel.id,
+                  name: msg.channel.name
+                },
+                msgId: msg.id,
+                user: firstMention || {id: msg.author.id, name: msg.author.username},
+                content: {
+                  message: msg.cleanContent,
+                  attachments: attachments.length ? attachments : undefined
+                },
+                pinned: msg.pinned ? true : undefined,
+                edits: edits.length ? edits : undefined
+              })
               counter[channel.id].count++
             }
           })
