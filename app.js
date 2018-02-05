@@ -5,6 +5,7 @@
 
 let readline = require('readline')
 let settings = require('./settings.js')
+let pretty = settings.formatOutput.enabled && Number.isInteger(settings.formatOutput.whitespace) ? settings.formatOutput.whitespace : 0
 
 let rlSettings = readline.createInterface({
   input: process.stdin,
@@ -18,7 +19,6 @@ if (settings.authtoken === '') {
       let question = () => rlSettings.question('\nNo guildID provided in settings.js, \nplease enter it manually.\nguildID: ', answer => {
         if (Number.isInteger(Number(answer))) {
           settings.guildID = answer
-          rlSettings.close()
           termsOfService()
         } else question()
       })
@@ -29,14 +29,14 @@ if (settings.authtoken === '') {
   let question = () => rlSettings.question('No guildID provided in settings.js, \nplease enter it manually.\nguildID: ', answer => {
     if (Number.isInteger(Number(answer))) {
       settings.guildID = answer
-      rlSettings.close()
       termsOfService()
     } else question()
   })
   question()
-}
+} else termsOfService()
 
 function termsOfService () {
+  rlSettings.close()
   if (!settings.acceptTOS) {
     let rl = readline.createInterface({
       input: process.stdin,
@@ -123,17 +123,24 @@ function start () {
       .channels.map(channel => {
         if (channel.permissionsFor(client.user.id).has('READ_MESSAGES') && channel.permissionsFor(client.user.id).has('READ_MESSAGE_HISTORY') && channel.type === 'text') {
           debug(channel.id, channel.name)
-          object[channel.id] = []
+          // Initializing channel specific objects.
+          object[channel.id] = {
+            name: channel.name,
+            id: channel.id,
+            roles: {},
+            users: {},
+            messages: []
+          }
           people[channel.id] = {}
           counter[channel.id] = {
             nextCount: settings.messagesEveryFile,
-            count: 1,
+            count: 0,
             atSplit: 0
           }
           return fetchMore(channel)
         }
       })
-    ).then((g) => {
+    ).then(g => {
       g = g.filter(function (e) { return e }) // Filter empties.
       let guild = g.pop()
       debug('Creating guild details file....')
@@ -141,8 +148,8 @@ function start () {
       guild.roles.forEach(item => {
         rolesInGuild.push({
           position: item.position,
-          id: item.id,
           name: item.name,
+          id: item.id,
           createdTimestamp: item.createdTimestamp,
           color: item.hexColor,
           hoistUsers: item.hoist,
@@ -157,17 +164,17 @@ function start () {
         let availableForRoles = []
         item.roles.forEach(roles => {
           availableForRoles.push({
-            id: roles.id,
-            name: roles.name
+            name: roles.name,
+            id: roles.id
           })
         })
         emojisInGuild.push({
-          id: item.id,
           name: item.name,
-          animated: item.animated,
+          id: item.id,
+          identifier: item.identifier,
           requiresColons: item.requiresColons,
           url: item.url,
-          identifier: item.identifier,
+          animated: item.animated,
           createdTimestamp: item.createdTimestamp,
           managed: item.managed,
           roles: availableForRoles.length > 0 ? availableForRoles : undefined
@@ -183,32 +190,34 @@ function start () {
           })
         })
         channelsInGuild.push({
-          position: item.position,
+          name: item.name,
           id: item.id,
           type: item.type,
-          name: item.name,
+          position: item.position,
           createdTimestamp: item.createdTimestamp,
-          parent: item.parent ? { id: item.parent.id, name: item.parent.name } : undefined,
+          parent: item.parent ? { name: item.parent.name, id: item.parent.id } : undefined,
           permissionOverwrites: permissionOverwrites.length > 0 ? permissionOverwrites : undefined
         })
       })
       let guildDetails = {
-        id: guild.id,
         name: guild.name,
+        id: guild.id,
         acronym: guild.nameAcronym,
         icon: guild.iconURL,
         isLarge: guild.large,
         memberCount: guild.memberCount,
         createdTimestamp: guild.createdTimestamp,
         afk: {
-          exists: guild.afkChannelId !== null,
-          id: guild.afkChannel.id,
+          exists: !!guild.afkChannel,
+          id: guild.afkChannelId,
           timeout: guild.afkTimeout
         },
         owner: {
+          name: guild.owner.user.username,
           id: guild.owner.id,
-          name: guild.owner.name,
-          tag: guild.owner.tag,
+          applicationId: guild.applicationId,
+          nickname: guild.owner.nickname,
+          tag: guild.owner.user.tag,
           avatar: guild.owner.displayAvatarURL
         },
         region: guild.region,
@@ -219,18 +228,25 @@ function start () {
         emojis: emojisInGuild,
         roles: rolesInGuild,
         channels: channelsInGuild,
-        _archivedAt: date,
+        _archivedAt: {
+          timestamp: date,
+          string: Date(date).toString()
+        },
         _archivedBy: {
+          name: guild.me.user.username,
           id: guild.me.user.id,
           nickname: guild.me.displayName,
-          name: guild.me.user.username,
           tag: guild.me.user.tag,
           avatar: guild.me.user.displayAvatarURL,
           isBot: guild.me.user.bot
         },
         _archiveApp: 'S.A.R.A.H. app by KararTY & Tonkku107 <https://github.com/kararty/serverautorecordarchiverheroine>'
       }
-      fs.writeFile(path.join(__dirname, 'temp', `[GUILD_INFO]${guild.name}(${guild.id}).json`), JSON.stringify(guildDetails, null, 2), (err) => {
+      if (!settings.formatOutput.mentionWhoArchived) {
+        delete guildDetails._archivedBy
+        delete guildDetails._archivedAt.string // Timezone is a potential identifiable personal information.
+      }
+      fs.writeFile(path.join(__dirname, 'temp', `[GUILD_INFO]${guild.name}(${guild.id}).json`), JSON.stringify(guildDetails, null, pretty), (err) => {
         if (err) throw err
         debug('Starting compression! Please wait, this may take time.')
         let output = fs.createWriteStream(path.join(__dirname, 'archive', `archive_${guild.name}(${guild.id})_${date}.zip`))
@@ -251,7 +267,8 @@ function start () {
 
   function timer () {
     setTimeout(() => {
-      console.log('Starting...', Date().toString())
+      date = Date.now()
+      console.log('Starting...', date.toString())
       cleanTempDir()
       run()
     }, new Date(interval.next()) - Date.now())
@@ -265,48 +282,99 @@ function start () {
           msg.forEach(msg => {
             if (!msg.system) {
               // Check https://discord.js.org/#/docs/main/stable/class/Message to see what you can archive.
-              let attachments = []
+              let attachments
               if (msg.attachments.size) {
-                msg.attachments.forEach((element) => {
-                  attachments.push(element.url)
+                attachments = []
+                msg.attachments.forEach(attachment => {
+                  attachments.push({filename: attachment.filename, url: attachment.url})
                 })
               }
-              let firstMention
+              let firstUserMention
               if (!people[channel.id][msg.author.id]) {
-                people[channel.id][msg.author.id] = { id: msg.author.id, avatar: msg.author.displayAvatarURL, isBot: msg.author.bot, createdTimestamp: msg.author.createdTimestamp, name: msg.author.username, tag: msg.author.tag }
-                firstMention = people[channel.id][msg.author.id]
+                let roles
+                if (msg.member) {
+                  roles = []
+                  let firstRoleMention
+                  msg.member.roles.forEach(role => {
+                    if (!object[channel.id].roles[role.id]) {
+                      firstRoleMention = {
+                        name: role.name,
+                        id: role.id,
+                        permissions: role.permissions,
+                        hexColor: role.hexColor
+                      }
+                      object[channel.id].roles[role.id] = firstRoleMention
+                    }
+                    roles.push(role.id)
+                  })
+                }
+                people[channel.id][msg.author.id] = {
+                  name: msg.author.username,
+                  id: msg.author.id,
+                  nickname: msg.member ? msg.member.nickname : undefined,
+                  tag: msg.author.tag,
+                  avatar: msg.author.displayAvatarURL,
+                  isBot: msg.author.bot,
+                  createdTimestamp: msg.author.createdTimestamp,
+                  roles: roles
+                }
+                firstUserMention = people[channel.id][msg.author.id]
+                object[channel.id].users[msg.author.id] = firstUserMention
               }
-              let edits = []
-              /* Doesn't work.
+              let edits
+              /* // Doesn't work. Client has to be there before edit happens?
               if (msg.editedTimestamp) {
                 msg.edits.forEach((element) => {
                   edits.push({[element.editedTimestamp]: element.cleanContent})
                 })
               }
               */
-              object[channel.id].push({timestamp: msg.createdTimestamp, in: {id: msg.channel.id, name: msg.channel.name}, msgId: msg.id, user: firstMention || {id: msg.author.id, name: msg.author.username}, content: {message: msg.cleanContent, attachments: attachments.length ? attachments : undefined}, pinned: msg.pinned ? true : undefined, edits: edits.length ? edits : undefined})
+              object[channel.id].messages.push({
+                msgId: msg.id,
+                userId: msg.author.id,
+                content: {
+                  message: msg.cleanContent,
+                  attachments: attachments
+                },
+                timestamp: msg.createdTimestamp,
+                pinned: msg.pinned ? true : undefined,
+                edited: msg.editedAtTimestamp,
+                edits: edits
+              })
               counter[channel.id].count++
             }
           })
-          debug(`${counter[channel.id].count} / ${counter[channel.id].nextCount}\t Split ${counter[channel.id].atSplit}\t for channel ${channel.name}`)
+          debug(`${counter[channel.id].count}\t File ${counter[channel.id].atSplit + 1}\t ${channel.name}`)
           if (counter[channel.id].count >= counter[channel.id].nextCount) {
             counter[channel.id].nextCount += settings.messagesEveryFile
             counter[channel.id].atSplit++
             debug('Split', counter[channel.id].atSplit, 'for channel', channel.id, '& next split at', counter[channel.id].nextCount)
-            fs.writeFile(path.join(__dirname, 'temp', `[CHANNEL]${channel.name}${channel.nsfw ? '[NSFW]' : ''}(${channel.id})_${counter[channel.id].atSplit}.json`), JSON.stringify(object[channel.id], null, 2), (err) => {
+            fs.writeFile(path.join(__dirname, 'temp', `[CHANNEL]${channel.name}${channel.nsfw ? '[NSFW]' : ''}(${channel.id})_${counter[channel.id].atSplit}.json`), JSON.stringify(object[channel.id], null, pretty), (err) => {
               if (err) throw err
               console.log('Saved split for channel', channel.id, 'at', counter[channel.id].count)
-              object[channel.id] = [] // Reset
+              object[channel.id] = {
+                name: channel.name,
+                id: channel.id,
+                roles: {},
+                users: {},
+                messages: []
+              } // Reset
               people[channel.id] = {} // Reset
               fetchMore(channel, msgLast.id).then(resolve, reject)
             })
           } else fetchMore(channel, msgLast.id).then(resolve, reject)
         } else {
           counter[channel.id].atSplit++
-          fs.writeFile(path.join(__dirname, 'temp', `[CHANNEL]${channel.name}${channel.nsfw ? '[NSFW]' : ''}(${channel.id})_${counter[channel.id].atSplit}.json`), JSON.stringify(object[channel.id], null, 2), (err) => {
+          fs.writeFile(path.join(__dirname, 'temp', `[CHANNEL]${channel.name}${channel.nsfw ? '[NSFW]' : ''}(${channel.id})_${counter[channel.id].atSplit}.json`), JSON.stringify(object[channel.id], null, pretty), (err) => {
             if (err) throw err
             console.log('Finished:', channel.id)
-            object[channel.id] = [] // Reset
+            object[channel.id] = {
+              name: channel.name,
+              id: channel.id,
+              roles: {},
+              users: {},
+              messages: []
+            } // Reset
             people[channel.id] = {} // Reset
             resolve(channel.guild)
           })
@@ -319,7 +387,6 @@ function start () {
     console.log('Logged into Discord.')
     if (settings.auto) {
       console.log('Starting automation...')
-      date = Date.now()
       timer()
     } else {
       console.log('Running one-timer...')
