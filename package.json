@@ -1,6 +1,6 @@
 {
   "name": "serverautorecordarchiverheroine",
-  "version": "1.2.1",
+  "version": "2.0.2",
   "description": "",
   "main": "app.js",
   "scripts": {
@@ -9,10 +9,12 @@
   "keywords": [
     "discord",
     "archive",
+    "discordapp",
+    "log messages",
     "save messages",
     "archive messages",
-    "log messages",
-    "discordapp"
+    "save discord messages",
+    "archive discord messages"
   ],
   "author": "Karar Al-Remahy",
   "contributors": [
