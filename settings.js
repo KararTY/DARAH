@@ -6,7 +6,7 @@ module.exports = {
   Please read this https://discordapp.com/developers/docs/legal before enabling. */
   authtoken: '', // Bot account is preferred.
   guildID: '', // While in developer mode, right click the server icon and click 'Copy ID'.
-  messagesEveryFile: 100000, // Amount of max messages in every file. In effect limiting every file size at around 30-40 MB.
+  messagesEveryFile: 100000, // Amount of max messages in every file. In effect limiting every file size at around 20-50 MB.
   formatOutput: {
     mentionWhoArchived: true, // Includes details of the account used for the archive.
     enabled: false, // Formats the json output. Default is false for lower file size.
