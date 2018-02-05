@@ -216,9 +216,9 @@ function start () {
           name: guild.owner.user.username,
           id: guild.owner.id,
           applicationId: guild.applicationId,
-          nickname: guild.owner.nickname,
+          nickname: guild.owner.nickname ? guild.owner.nickname : undefined,
           tag: guild.owner.user.tag,
-          avatar: guild.owner.displayAvatarURL
+          avatar: guild.owner.user.displayAvatarURL
         },
         region: guild.region,
         splash: guild.splashURL,
@@ -311,7 +311,7 @@ function start () {
                 people[channel.id][msg.author.id] = {
                   name: msg.author.username,
                   id: msg.author.id,
-                  nickname: msg.member ? msg.member.nickname : undefined,
+                  nickname: msg.member ? msg.member.nickname ? msg.member.nickname : undefined : undefined,
                   tag: msg.author.tag,
                   avatar: msg.author.displayAvatarURL,
                   isBot: msg.author.bot,
