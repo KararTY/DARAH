@@ -21,7 +21,7 @@ module.exports = {
     mentionWhoArchived: true, // Includes details of the account used for the archive.
     enabled: false, // Formats the json output. Default is false for lower file size.
     whitespace: 2 /* Amount of backspace to use for formatter or use '\t' for tabs
-    Defaults to 2 whitespace. Setting is disregarded if 'formatOutput.enabled' is 'false'. */
+    Defaults to 2 whitespace. This setting is disregarded if 'formatOutput.enabled' is 'false'. */
   }
 }
 // Cron help http://crontab.guru/ (Check this site out to see examples on CRON scheduling)
@@ -36,6 +36,8 @@ module.exports = {
 ### Prerequisites
  * NodeJS version >= 8.1.2
  * Enough disk space. **(100000 messages is around 20-50 MB in file size.)**
+
+### [What do the fields stand for?](/fields.md)
 
 ### Contributors
 [Tonkku107](https://github.com/tonkku107/) - [Website](https://tonkku.me/)
