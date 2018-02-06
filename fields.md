@@ -70,7 +70,7 @@
 * `_by.b`: **boolean** Account if bot
 * `_app`: **string**
 
-###[CHANNEL]channel-name(channel id).json
+### [CHANNEL]channel-name(channel id).json
 * `n`: **string** Channel name
 * `i`: **string** Channel id
 * `g`: **Object** Guild information
