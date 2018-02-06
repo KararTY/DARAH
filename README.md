@@ -37,6 +37,8 @@ module.exports = {
  * NodeJS version >= 8.1.2
  * Enough disk space. **(100000 messages is around 20-50 MB in file size.)**
 
+### [What do the fields stand for?](/fields.md)
+
 ### Contributors
 [Tonkku107](https://github.com/tonkku107/) - [Website](https://tonkku.me/)
 

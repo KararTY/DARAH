@@ -125,11 +125,15 @@ function start () {
           debug(channel.id, channel.name)
           // Initializing channel specific objects.
           object[channel.id] = {
-            name: channel.name,
-            id: channel.id,
-            roles: {},
-            users: {},
-            messages: []
+            n: channel.name,
+            i: channel.id,
+            g: {
+              n: channel.guild.name,
+              i: channel.guild.id
+            },
+            r: {},
+            u: {},
+            m: []
           }
           people[channel.id] = {}
           counter[channel.id] = {
@@ -147,16 +151,16 @@ function start () {
       let rolesInGuild = []
       guild.roles.forEach(item => {
         rolesInGuild.push({
-          position: item.position,
-          name: item.name,
-          id: item.id,
-          createdTimestamp: item.createdTimestamp,
-          color: item.hexColor,
-          hoistUsers: item.hoist,
-          members: item.members.size,
-          managed: item.managed,
-          mentionable: item.mentionable,
-          permissions: item.permissions
+          po: item.position,
+          n: item.name,
+          i: item.id,
+          t: item.createdTimestamp,
+          c: item.hexColor,
+          h: item.hoist,
+          m: item.members.size,
+          mg: item.managed,
+          me: item.mentionable,
+          p: item.permissions
         })
       })
       let emojisInGuild = []
@@ -164,20 +168,20 @@ function start () {
         let availableForRoles = []
         item.roles.forEach(roles => {
           availableForRoles.push({
-            name: roles.name,
-            id: roles.id
+            n: roles.name,
+            i: roles.id
           })
         })
         emojisInGuild.push({
-          name: item.name,
-          id: item.id,
-          identifier: item.identifier,
-          requiresColons: item.requiresColons,
-          url: item.url,
-          animated: item.animated,
-          createdTimestamp: item.createdTimestamp,
-          managed: item.managed,
-          roles: availableForRoles.length > 0 ? availableForRoles : undefined
+          n: item.name,
+          i: item.id,
+          if: item.identifier,
+          c: item.requiresColons,
+          u: item.url,
+          a: item.animated,
+          t: item.createdTimestamp,
+          m: item.managed,
+          r: availableForRoles.length > 0 ? availableForRoles : undefined
         })
       })
       let channelsInGuild = []
@@ -185,62 +189,62 @@ function start () {
         let permissionOverwrites = []
         item.permissionOverwrites.forEach(overwrites => {
           permissionOverwrites.push({
-            id: overwrites.id,
-            type: overwrites.type
+            i: overwrites.id,
+            ty: overwrites.type
           })
         })
         channelsInGuild.push({
-          name: item.name,
-          id: item.id,
-          type: item.type,
-          position: item.position,
-          createdTimestamp: item.createdTimestamp,
-          parent: item.parent ? { name: item.parent.name, id: item.parent.id } : undefined,
-          permissionOverwrites: permissionOverwrites.length > 0 ? permissionOverwrites : undefined
+          n: item.name,
+          i: item.id,
+          ty: item.type,
+          po: item.position,
+          t: item.createdTimestamp,
+          pa: item.parent ? { n: item.parent.name, i: item.parent.id } : undefined,
+          p: permissionOverwrites.length > 0 ? permissionOverwrites : undefined
         })
       })
       let guildDetails = {
-        name: guild.name,
-        id: guild.id,
-        acronym: guild.nameAcronym,
-        icon: guild.iconURL,
-        isLarge: guild.large,
-        memberCount: guild.memberCount,
-        createdTimestamp: guild.createdTimestamp,
-        afk: {
-          exists: !!guild.afkChannel,
-          id: guild.afkChannelId,
-          timeout: guild.afkTimeout
+        n: guild.name,
+        i: guild.id,
+        a: guild.nameAcronym,
+        u: guild.iconURL,
+        l: guild.large,
+        m: guild.memberCount,
+        t: guild.createdTimestamp,
+        af: {
+          e: !!guild.afkChannel,
+          i: guild.afkChannelId,
+          t: guild.afkTimeout
         },
-        owner: {
-          name: guild.owner.user.username,
-          id: guild.owner.id,
-          applicationId: guild.applicationId,
-          nickname: guild.owner.nickname ? guild.owner.nickname : undefined,
-          tag: guild.owner.user.tag,
-          avatar: guild.owner.user.displayAvatarURL
+        o: {
+          n: guild.owner.user.username,
+          i: guild.owner.id,
+          ai: guild.applicationId,
+          nn: guild.owner.nickname ? guild.owner.nickname : undefined,
+          tg: guild.owner.user.tag,
+          u: guild.owner.user.displayAvatarURL
         },
-        region: guild.region,
-        splash: guild.splashURL,
-        explicitContentFilter: guild.explicitContentFilter,
-        verificationLevel: guild.verificationLevel,
-        embedEnabled: guild.embedEnabled,
-        emojis: emojisInGuild,
-        roles: rolesInGuild,
-        channels: channelsInGuild,
-        _archivedAt: {
-          timestamp: date,
-          string: Date(date).toString()
+        re: guild.region,
+        s: guild.splashURL,
+        e: guild.explicitContentFilter,
+        v: guild.verificationLevel,
+        ee: guild.embedEnabled,
+        em: emojisInGuild,
+        r: rolesInGuild,
+        c: channelsInGuild,
+        _at: {
+          t: date,
+          s: Date(date).toString()
         },
-        _archivedBy: {
-          name: guild.me.user.username,
-          id: guild.me.user.id,
-          nickname: guild.me.displayName,
-          tag: guild.me.user.tag,
-          avatar: guild.me.user.displayAvatarURL,
-          isBot: guild.me.user.bot
+        _by: {
+          n: guild.me.user.username,
+          i: guild.me.user.id,
+          nn: guild.me.displayName,
+          tg: guild.me.user.tag,
+          u: guild.me.user.displayAvatarURL,
+          b: guild.me.user.bot
         },
-        _archiveApp: 'S.A.R.A.H. app by KararTY & Tonkku107 <https://github.com/kararty/serverautorecordarchiverheroine>'
+        _app: 'S.A.R.A.H. app by KararTY & Tonkku107 <https://github.com/kararty/serverautorecordarchiverheroine>'
       }
       if (!settings.formatOutput.mentionWhoArchived) {
         delete guildDetails._archivedBy
@@ -286,7 +290,7 @@ function start () {
               if (msg.attachments.size) {
                 attachments = []
                 msg.attachments.forEach(attachment => {
-                  attachments.push({filename: attachment.filename, url: attachment.url})
+                  attachments.push({n: attachment.filename, u: attachment.url})
                 })
               }
               let firstUserMention
@@ -296,55 +300,56 @@ function start () {
                   roles = []
                   let firstRoleMention
                   msg.member.roles.forEach(role => {
-                    if (!object[channel.id].roles[role.id]) {
+                    if (!object[channel.id].r[role.id]) {
                       firstRoleMention = {
-                        name: role.name,
-                        id: role.id,
-                        permissions: role.permissions,
-                        hexColor: role.hexColor
+                        n: role.name,
+                        i: role.id,
+                        p: role.permissions,
+                        c: role.hexColor
                       }
-                      object[channel.id].roles[role.id] = firstRoleMention
+                      object[channel.id].r[role.id] = firstRoleMention
                     }
                     roles.push(role.id)
                   })
                 }
                 people[channel.id][msg.author.id] = {
-                  name: msg.author.username,
-                  id: msg.author.id,
-                  nickname: msg.member ? msg.member.nickname ? msg.member.nickname : undefined : undefined,
-                  tag: msg.author.tag,
-                  avatar: msg.author.displayAvatarURL,
-                  isBot: msg.author.bot,
-                  createdTimestamp: msg.author.createdTimestamp,
-                  roles: roles
+                  n: msg.author.username,
+                  i: msg.author.id,
+                  nn: msg.member ? msg.member.nickname ? msg.member.nickname : undefined : undefined,
+                  tg: msg.author.tag,
+                  a: msg.author.displayAvatarURL,
+                  b: msg.author.bot,
+                  t: msg.author.createdTimestamp,
+                  r: roles
                 }
                 firstUserMention = people[channel.id][msg.author.id]
-                object[channel.id].users[msg.author.id] = firstUserMention
+                object[channel.id].u[msg.author.id] = firstUserMention
               }
               let edits
               /* // Doesn't work. Client has to be there before edit happens?
-              if (msg.editedTimestamp) {
+              if (msg.editedTimestamp && msg.edits.size) {
+                edits = []
                 msg.edits.forEach((element) => {
                   edits.push({[element.editedTimestamp]: element.cleanContent})
                 })
               }
               */
-              object[channel.id].messages.push({
-                msgId: msg.id,
-                userId: msg.author.id,
-                content: {
-                  message: msg.cleanContent,
-                  attachments: attachments
+              object[channel.id].m.push({
+                i: msg.id,
+                u: msg.author.id,
+                c: {
+                  m: msg.cleanContent,
+                  a: attachments
                 },
-                timestamp: msg.createdTimestamp,
-                pinned: msg.pinned ? true : undefined,
-                edited: msg.editedAtTimestamp,
-                edits: edits
+                t: msg.createdTimestamp,
+                p: msg.pinned ? true : undefined,
+                e: msg.editedAtTimestamp,
+                es: edits
               })
               counter[channel.id].count++
             }
           })
-          debug(`${counter[channel.id].count}\t File ${counter[channel.id].atSplit + 1}\t ${channel.name}`)
+          debug(`${counter[channel.id].count}\t File ${counter[channel.id].atSplit + 1} for\t ${channel.name}`)
           if (counter[channel.id].count >= counter[channel.id].nextCount) {
             counter[channel.id].nextCount += settings.messagesEveryFile
             counter[channel.id].atSplit++
@@ -353,11 +358,15 @@ function start () {
               if (err) throw err
               console.log('Saved split for channel', channel.id, 'at', counter[channel.id].count)
               object[channel.id] = {
-                name: channel.name,
-                id: channel.id,
-                roles: {},
-                users: {},
-                messages: []
+                n: channel.name,
+                i: channel.id,
+                g: {
+                  n: channel.guild.name,
+                  i: channel.guild.id
+                },
+                r: {},
+                u: {},
+                m: []
               } // Reset
               people[channel.id] = {} // Reset
               fetchMore(channel, msgLast.id).then(resolve, reject)
@@ -369,11 +378,15 @@ function start () {
             if (err) throw err
             console.log('Finished:', channel.id)
             object[channel.id] = {
-              name: channel.name,
-              id: channel.id,
-              roles: {},
-              users: {},
-              messages: []
+              n: channel.name,
+              i: channel.id,
+              g: {
+                n: channel.guild.name,
+                i: channel.guild.id
+              },
+              r: {},
+              u: {},
+              m: []
             } // Reset
             people[channel.id] = {} // Reset
             resolve(channel.guild)
