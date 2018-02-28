@@ -1,5 +1,5 @@
 # S.A.R.A.H. Parser - Server Auto Record Archiver Heroine
-## Archives ALL Discord messages in a guild.
+## Archive ALL Discord messages in a guild.
 
 ### 10 Step Setup.
   1. Get NodeJS, version **8.1.2 or newer**.
