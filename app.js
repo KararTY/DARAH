@@ -54,7 +54,7 @@ function termsOfService () {
           setTimeout(() => {
             start()
             rl.close()
-          }, 1 * 1000)
+          }, 30 * 1000)
           break
         case 'n':
           console.log('\nShutting down prematurely.\nPlease uninstall script.')
