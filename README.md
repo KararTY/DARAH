@@ -1,4 +1,4 @@
-# S.A.R.A.H. Parser - Server Auto Record Archiver Heroine
+# S.A.R.A.H. - Server Auto Record Archiver Heroine
 ## Archive ALL Discord messages in a guild.
 
 ### 10 Step Setup.
