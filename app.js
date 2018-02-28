@@ -89,7 +89,6 @@ function start () {
 
   let object = {}
   let counter = {}
-  let people = {}
   let date = Date.now()
 
   let disconnected = false
@@ -125,8 +124,11 @@ function start () {
           debug(channel.id, channel.name)
           // Initializing channel specific objects.
           object[channel.id] = {
-            n: channel.name,
-            i: channel.id,
+            c: {
+              n: channel.name,
+              i: channel.id,
+              to: channel.topic ? channel.topic : undefined
+            },
             g: {
               n: channel.guild.name,
               i: channel.guild.id
@@ -135,7 +137,6 @@ function start () {
             u: {},
             m: []
           }
-          people[channel.id] = {}
           counter[channel.id] = {
             nextCount: settings.messagesEveryFile,
             count: 0,
@@ -294,7 +295,7 @@ function start () {
                 })
               }
               let firstUserMention
-              if (!people[channel.id][msg.author.id]) {
+              if (!object[channel.id].u[msg.author.id]) {
                 let roles
                 if (msg.member) {
                   roles = []
@@ -312,17 +313,16 @@ function start () {
                     roles.push(role.id)
                   })
                 }
-                people[channel.id][msg.author.id] = {
+                firstUserMention = {
                   n: msg.author.username,
                   i: msg.author.id,
-                  nn: msg.member ? msg.member.nickname ? msg.member.nickname : undefined : undefined,
+                  nn: msg.member ? (msg.member.nickname ? msg.member.nickname : undefined) : undefined,
                   tg: msg.author.tag,
                   a: msg.author.displayAvatarURL,
                   b: msg.author.bot,
                   t: msg.author.createdTimestamp,
                   r: roles
                 }
-                firstUserMention = people[channel.id][msg.author.id]
                 object[channel.id].u[msg.author.id] = firstUserMention
               }
               let edits
@@ -358,8 +358,11 @@ function start () {
               if (err) throw err
               console.log('Saved split for channel', channel.id, 'at', counter[channel.id].count)
               object[channel.id] = {
-                n: channel.name,
-                i: channel.id,
+                c: {
+                  n: channel.name,
+                  i: channel.id,
+                  to: channel.topic ? channel.topic : undefined
+                },
                 g: {
                   n: channel.guild.name,
                   i: channel.guild.id
@@ -368,7 +371,6 @@ function start () {
                 u: {},
                 m: []
               } // Reset
-              people[channel.id] = {} // Reset
               fetchMore(channel, msgLast.id).then(resolve, reject)
             })
           } else fetchMore(channel, msgLast.id).then(resolve, reject)
@@ -378,8 +380,11 @@ function start () {
             if (err) throw err
             console.log('Finished:', channel.id)
             object[channel.id] = {
-              n: channel.name,
-              i: channel.id,
+              c: {
+                n: channel.name,
+                i: channel.id,
+                to: channel.topic ? channel.topic : undefined
+              },
               g: {
                 n: channel.guild.name,
                 i: channel.guild.id
@@ -388,7 +393,6 @@ function start () {
               u: {},
               m: []
             } // Reset
-            people[channel.id] = {} // Reset
             resolve(channel.guild)
           })
         }

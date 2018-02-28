@@ -1,5 +1,5 @@
-# Server Auto Record Archiver Heroine
-## Archives ALL Discord messages in a guild.
+# S.A.R.A.H. Parser - Server Auto Record Archiver Heroine
+## Archive ALL Discord messages in a guild.
 
 ### 10 Step Setup.
   1. Get NodeJS, version **8.1.2 or newer**.
@@ -33,6 +33,8 @@ module.exports = {
   10. Your archives will go under the folder `archive` as a .zip file with a guild name(guild id) + timestamp filename. If auto is enabled, program will idle until parsed CRON schedule hits.
  * **Note:** If you're archiving REALLY big servers, make sure to change `messagesEveryFile` variable in settings.js. However, default value of `100000` SHOULD suffice.
 
+### [Want to view your archives? Click here for S.A.R.A.H. Viewer!](https://github.com/kararty/sarah-viewer)
+
 ### Prerequisites
  * NodeJS version >= 8.1.2
  * Enough disk space. **(100000 messages is around 20-50 MB in file size.)**
@@ -43,6 +45,6 @@ module.exports = {
 [Tonkku107](https://github.com/tonkku107/) - [Website](https://tonkku.me/)
 
 ### Contributing
-Fork project & Send a pull request. Use eslint, thanks.
+Fork project & Send a pull request. Use eslint & the provided eslint file, thanks.
 
 ### License MIT Karar Al-Remahy

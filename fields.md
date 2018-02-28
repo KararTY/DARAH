@@ -71,8 +71,10 @@
 * `_app`: **string**
 
 ### [CHANNEL]channel-name(channel id).json
-* `n`: **string** Channel name
-* `i`: **string** Channel id
+* `c`: **Object** Channel
+* `c.n`: **string** Channel name
+* `c.i`: **string** Channel id
+* `c.to`: **string** Channel topic
 * `g`: **Object** Guild information
 * `g.n`: **string** Guild name
 * `g.i`: **string** Guild id
