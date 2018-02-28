@@ -1,3 +1,4 @@
+# S.A.R.A.H. Parser
 # Server Auto Record Archiver Heroine
 ## Archives ALL Discord messages in a guild.
 
