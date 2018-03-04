@@ -23,7 +23,7 @@ if (settings.authtoken === '') {
         } else question()
       })
       question()
-    } else rlSettings.close()
+    } else termsOfService()
   })
 } else if (settings.guildID === '') {
   let question = () => rlSettings.question('No guildID provided in settings.js, \nplease enter it manually.\nguildID: ', answer => {
@@ -45,7 +45,7 @@ function termsOfService () {
 
     rl.question("\nHave you read and accepted Discord's Developer Terms of Service?\n" +
     '\nhttps://discordapp.com/developers/docs/legal\n' +
-    '\nDo you understand that you may have to take all\n' +
+    '\nDo you understand that you have to take all\n' +
     'responsibility for any and all consequences as a\n' +
     'result of running this script? (y/n)\n: ', (answer) => {
       switch (answer.charAt(0)) {
@@ -73,22 +73,22 @@ function termsOfService () {
 }
 
 function start () {
-  let archiver = require('archiver')
-  let archive = archiver('zip')
   const { Client } = require('discord.js')
   let client = new Client()
   let fs = require('fs')
+  let rimraf = require('rimraf')
   let path = require('path')
   let parser = require('cron-parser')
-  let interval = parser.parseExpression(settings.CRON)
 
   // Put in your guild id in settings.js
-  const guildID = settings.guildID
+  const guildID = settings.guildID === 'ALL' ? undefined : settings.guildID
   // Put in your auth token in settings.js
   const auth = settings.authtoken
 
   let object = {}
-  let counter = {}
+  let deleted = {}
+
+  let counter = fs.existsSync(path.join(__dirname, '_SARAH_doNotDelete_counter.json')) ? JSON.parse(fs.readFileSync(path.join(__dirname, '_SARAH_doNotDelete_counter.json')).toString('utf8')) : {}
   let date = Date.now()
 
   let disconnected = false
@@ -98,12 +98,9 @@ function start () {
   }
 
   function cleanTempDir () {
-    if (!fs.existsSync(path.join(__dirname, 'temp'))) return debug('No temp directory found.')
-    fs.readdirSync(path.join(__dirname, 'temp')).forEach((file, index) => {
-      let curPath = path.join(__dirname, 'temp', file)
-      fs.unlinkSync(curPath)
-    })
-    console.log('Cleaned directory', path.join(__dirname, 'temp').toString())
+    if (!fs.existsSync(path.join(__dirname, 'temp'))) return debug('DEBUG-ONLY: No temp directory found.')
+    rimraf.sync(path.join(__dirname, 'temp'))
+    console.log('Cleaned directory', path.join(__dirname, 'temp').toString(), '\n')
   }
 
   function run () {
@@ -118,180 +115,252 @@ function start () {
       console.log('Creating archive directory.')
       fs.mkdirSync(path.join(__dirname, 'archive'))
     }
-    Promise.all(client.guilds.get(guildID)
-      .channels.map(channel => {
-        if (channel.permissionsFor(client.user.id).has('READ_MESSAGES') && channel.permissionsFor(client.user.id).has('READ_MESSAGE_HISTORY') && channel.type === 'text') {
-          debug(channel.id, channel.name)
-          // Initializing channel specific objects.
-          object[channel.id] = {
-            c: {
-              n: channel.name,
-              i: channel.id,
-              to: channel.topic ? channel.topic : undefined
-            },
-            g: {
-              n: channel.guild.name,
-              i: channel.guild.id
-            },
-            r: {},
-            u: {},
-            m: []
-          }
-          counter[channel.id] = {
-            nextCount: settings.messagesEveryFile,
-            count: 0,
-            atSplit: 0
-          }
-          return fetchMore(channel)
+    Promise.all(client.channels.filter(i => {
+      if (settings.channels.length > 0) {
+        return i.type === 'text' ? settings.channels.includes(i.id) : i.type === 'dm' ? settings.channels.includes(i.recipient.id) : i.type === 'group' ? settings.channels.includes(i.ownerId) : false
+      } else return true
+    }).filter(i => (guildID ? (i.guild ? i.guild.id === guildID : false) : true) && i.type === 'text' ? (i.permissionsFor(client.user.id).has('READ_MESSAGES') && i.permissionsFor(client.user.id).has('READ_MESSAGE_HISTORY')) : true).filter(i => (i.type === 'text' || i.type === 'dm' || i.type === 'group')).map(channel => {
+      console.log('Starting archive for:', channel.id, channel.name ? channel.name : channel.id)
+      // Initializing channel specific objects.
+      object[channel.id] = {
+        c: {
+          n: channel.name,
+          i: channel.id,
+          to: channel.topic ? channel.topic : undefined
+        },
+        g: channel.guild ? {
+          n: channel.guild.name,
+          i: channel.guild.id
+        } : undefined,
+        r: {},
+        u: {},
+        m: []
+      }
+      if (!counter[channel.id]) {
+        counter[channel.id] = {
+          nextCount: settings.messagesEveryFile,
+          count: 0,
+          atSplit: 0,
+          lastMsgId: null
         }
-      })
+      }
+      return fetchMore(channel, null, settings.fullArchive ? null : counter[channel.id].lastMsgId)
+    })
     ).then(g => {
       g = g.filter(function (e) { return e }) // Filter empties.
-      let guild = g.pop()
-      debug('Creating guild details file....')
-      let rolesInGuild = []
-      guild.roles.forEach(item => {
-        rolesInGuild.push({
-          po: item.position,
-          n: item.name,
-          i: item.id,
-          t: item.createdTimestamp,
-          c: item.hexColor,
-          h: item.hoist,
-          m: item.members.size,
-          mg: item.managed,
-          me: item.mentionable,
-          p: item.permissions
-        })
-      })
-      let emojisInGuild = []
-      guild.emojis.forEach(item => {
-        let availableForRoles = []
-        item.roles.forEach(roles => {
-          availableForRoles.push({
-            n: roles.name,
-            i: roles.id
+      let gs = g.filter(g => !!g.id).concat(g.filter(g => typeof g === 'string'))
+      if (gs.length > 0) {
+        let finished = []
+        gs.forEach(guild => finished.push(false))
+        gs.forEach((guild, index, array) => {
+          if (!fs.existsSync(path.join(__dirname, 'archive', `${guild.id ? `${guild.name}_${guild.id}` : guild}`))) {
+            console.log(`Creating archive directory for ${guild.id ? `guild ${guild.name}_${guild.id}` : guild}.`)
+            fs.mkdirSync(path.join(__dirname, 'archive', `${guild.id ? `${guild.name}_${guild.id}` : guild}`))
+          }
+          if (typeof guild !== 'string') {
+            console.log(`Creating guild details file for ${guild.name} ${guild.id}...`)
+            let rolesInGuild = []
+            guild.roles.forEach(item => {
+              rolesInGuild.push({
+                po: item.position,
+                n: item.name,
+                i: item.id,
+                t: item.createdTimestamp,
+                c: item.hexColor,
+                h: item.hoist,
+                m: item.members.size,
+                mg: item.managed,
+                me: item.mentionable,
+                p: item.permissions
+              })
+            })
+            let emojisInGuild = []
+            guild.emojis.forEach(item => {
+              let availableForRoles = []
+              item.roles.forEach(roles => {
+                availableForRoles.push({
+                  n: roles.name,
+                  i: roles.id
+                })
+              })
+              emojisInGuild.push({
+                n: item.name,
+                i: item.id,
+                if: item.identifier,
+                c: item.requiresColons,
+                u: item.url,
+                a: item.animated,
+                t: item.createdTimestamp,
+                m: item.managed,
+                r: availableForRoles.length > 0 ? availableForRoles : undefined
+              })
+            })
+            let channelsInGuild = []
+            guild.channels.forEach(item => {
+              let permissionOverwrites = []
+              item.permissionOverwrites.forEach(overwrites => {
+                permissionOverwrites.push({
+                  i: overwrites.id,
+                  ty: overwrites.type
+                })
+              })
+              channelsInGuild.push({
+                n: item.name,
+                i: item.id,
+                ty: item.type,
+                po: item.position,
+                t: item.createdTimestamp,
+                pa: item.parent ? { n: item.parent.name, i: item.parent.id } : undefined,
+                p: permissionOverwrites.length > 0 ? permissionOverwrites : undefined
+              })
+            })
+            let guildDetails = {
+              n: guild.name,
+              i: guild.id,
+              a: guild.nameAcronym,
+              u: guild.iconURL,
+              l: guild.large,
+              m: guild.memberCount,
+              t: guild.createdTimestamp,
+              af: {
+                e: !!guild.afkChannel,
+                i: guild.afkChannelId,
+                t: guild.afkTimeout
+              },
+              o: {
+                n: guild.owner.user.username,
+                i: guild.owner.id,
+                ai: guild.applicationId,
+                nn: guild.owner.nickname ? guild.owner.nickname : undefined,
+                tg: guild.owner.user.tag,
+                u: guild.owner.user.displayAvatarURL
+              },
+              re: guild.region,
+              s: guild.splashURL,
+              e: guild.explicitContentFilter,
+              v: guild.verificationLevel,
+              ee: guild.embedEnabled,
+              em: emojisInGuild,
+              r: rolesInGuild,
+              c: channelsInGuild,
+              _at: {
+                t: date,
+                s: new Date(date).toString()
+              },
+              _by: {
+                n: guild.me.user.username,
+                i: guild.me.user.id,
+                nn: guild.me.displayName,
+                tg: guild.me.user.tag,
+                u: guild.me.user.displayAvatarURL,
+                b: guild.me.user.bot
+              },
+              _app: 'S.A.R.A.H. app by KararTY & Tonkku107 <https://github.com/kararty/serverautorecordarchiverheroine>',
+              _disclaimer: 'PLEASE NOTE THIS ARCHIVE MAY, AND CAN, CONTAIN ERRONEOUS AND/OR MODIFIED/EDITED INFORMATION. THIS ARCHIVE, IN ITS ENTIRETY, CAN ONLY BE VERIFIED BY OFFICIAL DISCORD STAFF.'
+            /* KararTY's note: It is on the person taking the archive to prove that their archive doesn't contain any modified/edited information.
+            This/These script(s), and its coder(s), is/are not responsible for any erroneous and/or modified/edited information in archives. */
+            }
+            if (!settings.formatOutput.mentionWhoArchived) {
+              delete guildDetails._archivedBy
+              delete guildDetails._archivedAt.string // Timezones are a potentially identifiable personal information.
+            }
+            // Create the guild info file
+            fs.writeFileSync(path.join(__dirname, 'temp', guild.id, `[GUILD_INFO]${guild.name}(${guild.id}).json`), JSON.stringify(guildDetails, null, pretty))
+          }
+          // Create counter file.
+          fs.writeFile(path.join(__dirname, '_SARAH_doNotDelete_counter.json'), JSON.stringify(counter), (err) => {
+            if (err) throw err
+            fs.existsSync(path.join(__dirname, '_SARAH_doNotDelete_counter.json')) ? debug('DEBUG-ONLY: Rewriting counter (_SARAH_doNotDelete_counter.json) file.') : console.log('Writing counter file. Note: Do not delete this counter (_SARAH_doNotDelete_counter.json) file.')
+          })
+          // Finally ZIP archive and finalize.
+          debug('DEBUG-ONLY: Starting compression! Please wait, this may take time.')
+          let output = fs.createWriteStream(path.join(__dirname, 'archive', `${guild.id ? `${guild.name}_${guild.id}` : guild}`, `archive_${guild.id ? `${guild.name}(${guild.id})` : `(${guild})`}_${date}.zip`))
+          output.on('close', () => {
+            console.log('Finished archiving!', new Date().toString())
+            finished[index] = true
+            debug(`DEBUG-ONLY: ${finished.filter(i => i === true).length} / ${finished.length}`)
+            if (!finished.includes(false)) {
+              console.log('Finalizing...')
+              if (!settings.auto) {
+                client.destroy()
+                process.exit(0)
+              }
+              timer()
+            }
+          })
+          // TODO: Any memory leaks if this is put here?
+          let archiver = require('archiver')
+          let archive = archiver('zip')
+          archive.pipe(output)
+          archive.glob('**/*', { cwd: path.join(__dirname, 'temp', guild.id ? guild.id : guild), src: ['**/*'], expand: true })
+          archive.finalize((err, bytes) => {
+            if (err) throw err
+            // #Not working# if (settings.debug) console.log('Finished compressing! Total bytes', bytes, '\nNot done yet! Please wait...')
           })
         })
-        emojisInGuild.push({
-          n: item.name,
-          i: item.id,
-          if: item.identifier,
-          c: item.requiresColons,
-          u: item.url,
-          a: item.animated,
-          t: item.createdTimestamp,
-          m: item.managed,
-          r: availableForRoles.length > 0 ? availableForRoles : undefined
-        })
-      })
-      let channelsInGuild = []
-      guild.channels.forEach(item => {
-        let permissionOverwrites = []
-        item.permissionOverwrites.forEach(overwrites => {
-          permissionOverwrites.push({
-            i: overwrites.id,
-            ty: overwrites.type
-          })
-        })
-        channelsInGuild.push({
-          n: item.name,
-          i: item.id,
-          ty: item.type,
-          po: item.position,
-          t: item.createdTimestamp,
-          pa: item.parent ? { n: item.parent.name, i: item.parent.id } : undefined,
-          p: permissionOverwrites.length > 0 ? permissionOverwrites : undefined
-        })
-      })
-      let guildDetails = {
-        n: guild.name,
-        i: guild.id,
-        a: guild.nameAcronym,
-        u: guild.iconURL,
-        l: guild.large,
-        m: guild.memberCount,
-        t: guild.createdTimestamp,
-        af: {
-          e: !!guild.afkChannel,
-          i: guild.afkChannelId,
-          t: guild.afkTimeout
-        },
-        o: {
-          n: guild.owner.user.username,
-          i: guild.owner.id,
-          ai: guild.applicationId,
-          nn: guild.owner.nickname ? guild.owner.nickname : undefined,
-          tg: guild.owner.user.tag,
-          u: guild.owner.user.displayAvatarURL
-        },
-        re: guild.region,
-        s: guild.splashURL,
-        e: guild.explicitContentFilter,
-        v: guild.verificationLevel,
-        ee: guild.embedEnabled,
-        em: emojisInGuild,
-        r: rolesInGuild,
-        c: channelsInGuild,
-        _at: {
-          t: date,
-          s: Date(date).toString()
-        },
-        _by: {
-          n: guild.me.user.username,
-          i: guild.me.user.id,
-          nn: guild.me.displayName,
-          tg: guild.me.user.tag,
-          u: guild.me.user.displayAvatarURL,
-          b: guild.me.user.bot
-        },
-        _app: 'S.A.R.A.H. app by KararTY & Tonkku107 <https://github.com/kararty/serverautorecordarchiverheroine>'
+      } else {
+        console.log('Nothing to archive this time!', new Date().toString())
+        if (!settings.auto) process.exit(0)
+        timer()
       }
-      if (!settings.formatOutput.mentionWhoArchived) {
-        delete guildDetails._archivedBy
-        delete guildDetails._archivedAt.string // Timezone is a potential identifiable personal information.
-      }
-      fs.writeFile(path.join(__dirname, 'temp', `[GUILD_INFO]${guild.name}(${guild.id}).json`), JSON.stringify(guildDetails, null, pretty), (err) => {
-        if (err) throw err
-        debug('Starting compression! Please wait, this may take time.')
-        let output = fs.createWriteStream(path.join(__dirname, 'archive', `archive_${guild.name}(${guild.id})_${date}.zip`))
-        output.on('close', () => {
-          console.log('Finished archiving!', Date().toString())
-          if (!settings.auto) process.exit(0)
-          timer()
-        })
-        archive.pipe(output)
-        archive.glob('**/*', { cwd: path.join(__dirname, 'temp'), src: ['**/*'], expand: true })
-        archive.finalize((err, bytes) => {
-          if (err) throw err
-          // #Not working# if (settings.debug) console.log('Finished compressing! Total bytes', bytes, '\nNot done yet! Please wait...')
-        })
-      })
     })
   }
 
   function timer () {
+    console.log('Next archive at', parser.parseExpression(settings.CRON).next().toString())
     setTimeout(() => {
       date = Date.now()
-      console.log('Starting...', date.toString())
+      console.log('Starting...', new Date(date).toString())
       cleanTempDir()
       run()
-    }, new Date(interval.next()) - Date.now())
+    }, new Date(parser.parseExpression(settings.CRON).next()) - Date.now())
   }
 
-  const fetchMore = (channel, before) => {
+  const fetchMore = (channel, before, after) => {
     return new Promise((resolve, reject) => {
-      channel.fetchMessages({limit: 100, before: before}).then(msg => {
+      channel.fetchMessages({limit: 100, before: before, after: after}).then(msg => {
         if (msg.size > 0) {
           let msgLast = msg.last()
+          let msgFirst = msg.first()
           msg.forEach(msg => {
             if (!msg.system) {
               // Check https://discord.js.org/#/docs/main/stable/class/Message to see what you can archive.
               let attachments
-              if (msg.attachments.size) {
+              if (msg.attachments.size > 0) {
                 attachments = []
                 msg.attachments.forEach(attachment => {
                   attachments.push({n: attachment.filename, u: attachment.url})
+                })
+              }
+              let embeds
+              if (msg.embeds.length > 0) {
+                embeds = []
+                msg.embeds.forEach(embed => {
+                  let fields
+                  if (embed.fields.length > 0) {
+                    fields = []
+                    embed.fields.forEach(field => {
+                      fields.push({
+                        l: field.inline,
+                        n: field.name,
+                        v: field.value
+                      })
+                    })
+                  }
+                  embeds.push({
+                    a: embed.author ? { n: embed.author.name, u: embed.author.url, a: embed.author.iconURL } : undefined,
+                    c: embed.color ? embed.hexColor : undefined,
+                    d: embed.description,
+                    f: fields,
+                    fo: embed.footer ? { u: embed.footer.proxyIconURL, v: embed.footer.text } : undefined,
+                    i: embed.image ? embed.image.proxyURL : undefined,
+                    p: embed.provider ? { n: embed.provider.name, u: embed.provider.url ? embed.provider.url : undefined } : undefined,
+                    th: embed.thumbnail ? embed.thumbnail.proxyURL : undefined,
+                    t: embed.createdTimestamp,
+                    ti: embed.title,
+                    ty: embed.type === 'rich' ? undefined : embed.type,
+                    v: embed.video ? embed.video.url : undefined
+                  })
                 })
               }
               let firstUserMention
@@ -327,10 +396,10 @@ function start () {
               }
               let edits
               /* // Doesn't work. Client has to be there before edit happens?
-              if (msg.editedTimestamp && msg.edits.size) {
+              if (msg.editedTimestamp && msg.edits.length > 0) {
                 edits = []
                 msg.edits.forEach((element) => {
-                  edits.push({[element.editedTimestamp]: element.cleanContent})
+                  edits.push({[element.editedTimestamp]: element.content})
                 })
               }
               */
@@ -338,23 +407,33 @@ function start () {
                 i: msg.id,
                 u: msg.author.id,
                 c: {
-                  m: msg.cleanContent,
-                  a: attachments
+                  m: msg.content,
+                  a: attachments,
+                  e: embeds
                 },
                 t: msg.createdTimestamp,
                 p: msg.pinned ? true : undefined,
-                e: msg.editedAtTimestamp,
+                e: msg.editedTimestamp ? msg.editedTimestamp : undefined,
+                n: msg.nonce, // Might be a completely useless field.
+                s: msg.system ? true : undefined,
+                ty: msg.type === 'DEFAULT' ? undefined : msg.type,
+                ts: msg.tts ? true : undefined,
                 es: edits
               })
               counter[channel.id].count++
+              if (counter[channel.id].lastMsgId ? (Number(msg.id) > Number(counter[channel.id].lastMsgId)) : true) counter[channel.id].lastMsgId = msg.id
             }
           })
-          debug(`${counter[channel.id].count}\t File ${counter[channel.id].atSplit + 1} for\t ${channel.name}`)
+          debug(`DEBUG-ONLY: ${counter[channel.id].count}\t File ${counter[channel.id].atSplit + 1} for\t ${channel.name ? channel.name : channel.id}`)
           if (counter[channel.id].count >= counter[channel.id].nextCount) {
             counter[channel.id].nextCount += settings.messagesEveryFile
             counter[channel.id].atSplit++
-            debug('Split', counter[channel.id].atSplit, 'for channel', channel.id, '& next split at', counter[channel.id].nextCount)
-            fs.writeFile(path.join(__dirname, 'temp', `[CHANNEL]${channel.name}${channel.nsfw ? '[NSFW]' : ''}(${channel.id})_${counter[channel.id].atSplit}.json`), JSON.stringify(object[channel.id], null, pretty), (err) => {
+            debug('DEBUG ONLY: Split', counter[channel.id].atSplit, 'for channel', channel.id, '& next split at', counter[channel.id].nextCount)
+            if (!fs.existsSync(path.join(__dirname, 'temp', channel.guild ? channel.guild.id : channel.id))) {
+              console.log(`Creating temp directory for ${channel.guild ? 'guild ' + channel.guild.id : channel.id}.`)
+              fs.mkdirSync(path.join(__dirname, 'temp', channel.guild ? channel.guild.id : channel.id))
+            }
+            fs.writeFile(path.join(__dirname, 'temp', channel.guild ? channel.guild.id : channel.id, `[CHANNEL]${channel.guild ? `${channel.name}${channel.nsfw ? '[NSFW]' : ''}` : ''}(${channel.id})_${counter[channel.id].atSplit}.json`), JSON.stringify(object[channel.id], null, pretty), (err) => {
               if (err) throw err
               console.log('Saved split for channel', channel.id, 'at', counter[channel.id].count)
               object[channel.id] = {
@@ -363,20 +442,35 @@ function start () {
                   i: channel.id,
                   to: channel.topic ? channel.topic : undefined
                 },
-                g: {
+                g: channel.guild ? {
                   n: channel.guild.name,
                   i: channel.guild.id
-                },
+                } : undefined,
                 r: {},
                 u: {},
                 m: []
               } // Reset
-              fetchMore(channel, msgLast.id).then(resolve, reject)
+              fetchMore(channel, after ? null : msgLast.id, after ? msgFirst.id : null).then(resolve, reject)
             })
-          } else fetchMore(channel, msgLast.id).then(resolve, reject)
+          } else fetchMore(channel, after ? null : msgLast.id, after ? msgFirst.id : null).then(resolve, reject)
         } else {
+          if (object[channel.id].m.length === 0 && deleted[channel.id].length === 0) {
+            debug('DEBUG-ONLY: No new messages in', channel.id)
+            return resolve(null)
+          }
           counter[channel.id].atSplit++
-          fs.writeFile(path.join(__dirname, 'temp', `[CHANNEL]${channel.name}${channel.nsfw ? '[NSFW]' : ''}(${channel.id})_${counter[channel.id].atSplit}.json`), JSON.stringify(object[channel.id], null, pretty), (err) => {
+          counter[channel.id].count = 0 // Reset
+          counter[channel.id].nextCount = settings.messagesEveryFile // Reset
+          // If any messages have been deleted between now and last archive while script was watching, output it into file.
+          if (settings.auto && deleted[channel.id].length > 0) {
+            object[channel.id].d = deleted[channel.id]
+            deleted[channel.id] = [] // Reset
+          }
+          if (!fs.existsSync(path.join(__dirname, 'temp', channel.guild ? channel.guild.id : channel.id))) {
+            console.log(`Creating temp directory for ${channel.guild ? 'guild ' + channel.guild.id : channel.id}.`)
+            fs.mkdirSync(path.join(__dirname, 'temp', channel.guild ? channel.guild.id : channel.id))
+          }
+          fs.writeFile(path.join(__dirname, 'temp', channel.guild ? channel.guild.id : channel.id, `[CHANNEL]${channel.guild ? `${channel.name}${channel.nsfw ? '[NSFW]' : ''}` : ''}(${channel.id})_${counter[channel.id].atSplit}${(object[channel.id].m.length === 0 && object[channel.id].d.length > 0) ? '_deletionOnly.json' : '.json'}`), JSON.stringify(object[channel.id], null, pretty), (err) => {
             if (err) throw err
             console.log('Finished:', channel.id)
             object[channel.id] = {
@@ -385,32 +479,167 @@ function start () {
                 i: channel.id,
                 to: channel.topic ? channel.topic : undefined
               },
-              g: {
+              g: channel.guild ? {
                 n: channel.guild.name,
                 i: channel.guild.id
-              },
+              } : undefined,
               r: {},
               u: {},
               m: []
             } // Reset
-            resolve(channel.guild)
+            resolve(channel.guild ? channel.guild : channel.id)
           })
         }
       })
     })
   }
 
-  client.once('ready', () => {
-    console.log('Logged into Discord.')
+  // Message deletion
+  client.on('messageDeleteBulk', msgs => {
     if (settings.auto) {
-      console.log('Starting automation...')
-      timer()
-    } else {
-      console.log('Running one-timer...')
-      cleanTempDir()
-      run()
+      msgs.forEach(msg => {
+        if (settings.channels.length > 0 ? settings.channels.includes(msg.channel.id) : (guildID ? (guildID === msg.guild.id) : true)) {
+          debug('DEBUG-ONLY: Message deleted in', msg.channel.id, ', will output message content.')
+          if (!deleted[msg.channel.id]) deleted[msg.channel.id] = []
+          let attachments
+          if (msg.attachments.size > 0) {
+            attachments = []
+            msg.attachments.forEach(attachment => {
+              attachments.push({n: attachment.filename, u: attachment.url})
+            })
+          }
+          let edits
+          // Client has to be there before edit happens?
+          // if (msg.editedTimestamp && msg.edits.length > 0) {
+          //   edits = []
+          //   msg.edits.forEach((element) => {
+          //     edits.push({t: element.editedTimestamp, m: element.content})
+          //   })
+          // }
+          let embeds
+          if (msg.embeds.length > 0) {
+            embeds = []
+            msg.embeds.forEach(embed => {
+              let fields
+              if (embed.fields.length > 0) {
+                fields = []
+                embed.fields.forEach(field => {
+                  fields.push({
+                    l: field.inline,
+                    n: field.name,
+                    v: field.value
+                  })
+                })
+              }
+              embeds.push({
+                a: embed.author ? { n: embed.author.name, u: embed.author.url, a: embed.author.iconURL } : undefined,
+                c: embed.color ? embed.hexColor : undefined,
+                d: embed.description,
+                f: fields,
+                fo: embed.footer ? { u: embed.footer.proxyIconURL, v: embed.footer.text } : undefined,
+                i: embed.image ? embed.image.proxyURL : undefined,
+                p: embed.provider ? { n: embed.provider.name, u: embed.provider.url ? embed.provider.url : undefined } : undefined,
+                th: embed.thumbnail ? embed.thumbnail.proxyURL : undefined,
+                t: embed.createdTimestamp,
+                ti: embed.title,
+                ty: embed.type === 'rich' ? undefined : embed.type,
+                v: embed.video ? embed.video.url : undefined
+              })
+            })
+          }
+          deleted[msg.channel.id].push({
+            i: msg.id,
+            u: msg.author.id,
+            c: {
+              m: msg.content,
+              a: attachments,
+              e: embeds
+            },
+            t: msg.createdTimestamp,
+            p: msg.pinned ? true : undefined,
+            e: msg.editedTimestamp ? msg.editedTimestamp : undefined,
+            n: msg.nonce, // Might be a completely useless field.
+            s: msg.system ? true : undefined,
+            ty: msg.type === 'DEFAULT' ? undefined : msg.type,
+            ts: msg.tts ? true : undefined,
+            es: edits
+          })
+        }
+      })
     }
-  }).on('reconnecting', () => {
+  }).on('messageDelete', msg => {
+    if (settings.auto) {
+      debug('DEBUG-ONLY: messageDelete: Do we keep track?', settings.channels.length > 0 ? settings.channels.includes(msg.channel.id) : (guildID ? (guildID === msg.guild.id) : true), 'Calculation:', settings.channels.length > 0, settings.channels.includes(msg.channel.id), (guildID ? (guildID === msg.guild.id) : true))
+      if (settings.channels.length > 0 ? settings.channels.includes(msg.channel.id) : (guildID ? (guildID === msg.guild.id) : true)) {
+        debug('DEBUG-ONLY: Message deleted in', msg.channel.id)
+        let attachments
+        if (msg.attachments.size > 0) {
+          attachments = []
+          msg.attachments.forEach(attachment => {
+            attachments.push({n: attachment.filename, u: attachment.url})
+          })
+        }
+        let edits
+        // Client has to be there before edit happens?
+        // if (msg.editedTimestamp && msg.edits.length > 0) {
+        //   edits = []
+        //   msg.edits.forEach((element) => {
+        //     edits.push({t: element.editedTimestamp, m: element.content})
+        //   })
+        // }
+        let embeds
+        if (msg.embeds.length > 0) {
+          embeds = []
+          msg.embeds.forEach(embed => {
+            let fields
+            if (embed.fields.length > 0) {
+              fields = []
+              embed.fields.forEach(field => {
+                fields.push({
+                  l: field.inline,
+                  n: field.name,
+                  v: field.value
+                })
+              })
+            }
+            embeds.push({
+              a: embed.author ? { n: embed.author.name, u: embed.author.url, a: embed.author.iconURL } : undefined,
+              c: embed.color ? embed.hexColor : undefined,
+              d: embed.description,
+              f: fields,
+              fo: embed.footer ? { u: embed.footer.proxyIconURL, v: embed.footer.text } : undefined,
+              i: embed.image ? embed.image.proxyURL : undefined,
+              p: embed.provider ? { n: embed.provider.name, u: embed.provider.url ? embed.provider.url : undefined } : undefined,
+              th: embed.thumbnail ? embed.thumbnail.proxyURL : undefined,
+              t: embed.createdTimestamp,
+              ti: embed.title,
+              ty: embed.type === 'rich' ? undefined : embed.type,
+              v: embed.video ? embed.video.url : undefined
+            })
+          })
+        }
+        deleted[msg.channel.id].push({
+          i: msg.id,
+          u: msg.author.id,
+          c: {
+            m: msg.content,
+            a: attachments,
+            e: embeds
+          },
+          t: msg.createdTimestamp,
+          p: msg.pinned ? true : undefined,
+          e: msg.editedTimestamp ? msg.editedTimestamp : undefined,
+          n: msg.nonce, // Might be a completely useless field.
+          s: msg.system ? true : undefined,
+          ty: msg.type === 'DEFAULT' ? undefined : msg.type,
+          ts: msg.tts ? true : undefined,
+          es: edits
+        })
+      }
+    }
+  })
+
+  client.on('reconnecting', () => {
     console.log('Reconnecting to Discord...')
     disconnected = true
   }).on('resume', () => {
@@ -418,5 +647,24 @@ function start () {
     disconnected = false
   }).on('disconnect', () => {
     throw new Error("Couldn't connect to Discord after multiple retries. Check your connection and relaunch S.A.R.A.H.")
+  }).once('ready', () => {
+    // Setup for deleted messages, functionality will only work if 'auto' is true.
+    client.channels.filter(i => i.type === 'text' ? (i.permissionsFor(client.user.id).has('READ_MESSAGES') && i.permissionsFor(client.user.id).has('READ_MESSAGE_HISTORY')) : true)
+      .filter(i => (i.type === 'text' || i.type === 'dm' || i.type === 'group')).forEach(channel => {
+        if (guildID ? channel.guild.id === guildID : true) {
+          if (!deleted[channel.id]) deleted[channel.id] = []
+          if (deleted[channel.id]) debug(`DEBUG-ONLY: Setting up in-memory deletion array for ${channel.id} - ${channel.type}`)
+        }
+      })
+
+    console.log('Logged into Discord.')
+    if (settings.auto) {
+      console.log('Started automation.')
+      timer()
+    } else {
+      console.log('Running one-timer...')
+      cleanTempDir()
+      run()
+    }
   }).login(auth)
 }
