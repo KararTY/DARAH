@@ -1,19 +1,20 @@
 module.exports = {
-  auto: false, /* Will run automatically on a schedule based on 'CRON'.
+  auto: false, /* If enabled the script will run automatically on a schedule based on 'CRON'.
   Disable this if you're running your own OS CRON system script. */
-  debug: true, // Will display debug related messages to your console. (Really spammy.)
-  CRON: '0 0 */1 * *', // This example 'CRON' will run archiver at every midnight (00:00).
+  debug: true, // If enabled this will display debug related messages in your console. (Really spammy.)
+  CRON: '0 0 */1 * *', /* This example 'CRON' will run archiver at every midnight (00:00).
+  Only works if 'auto' is 'true'. */
   acceptTOS: false, /* Enable this if you're running your own OS CRON system script.
   Please read this https://discordapp.com/developers/docs/legal before enabling. */
   fullArchive: false, /* Enable this if you want every archive to contain ALL (from beginning to end) messages.
   First archives are not affected. */
-  authtoken: '', // Bot account is preferred.
-  guildID: '', // While in developer mode, right click the server icon and click 'Copy ID'.
-  /* Want to archive absolutely EVERYTHING, including DMs? Put in ''ALL''.
+  authtoken: '', // (REQUIRED) Bot account is preferred.
+  guildID: '', /* (REQUIRED) While in developer mode, right click the server icon and click 'Copy ID'.
+  Want to archive absolutely EVERYTHING, including DMs? Put in ''ALL''.
   NOTE: This may hang the process and/or ratelimit your access to Discord. */
   channels: [], /* While in developer mode, right click every channel you want to archive and click 'Copy ID'.
   Make sure you wrap the channel ID with apostrophes (''). Leave empty ('[]') for all channels.
-  May, or may not, work together with 'guildID: 'ALL'' */
+  Works together with 'guildID: 'ALL'' if you want to archive specific channels not in guilds. */
   messagesEveryFile: 100000, /* Amount of max messages in every file.
   Default of 100000 is limiting every file size at around 20-50 MB. */
   formatOutput: {

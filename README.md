@@ -1,6 +1,10 @@
 # S.A.R.A.H. - Server Auto Record Archiver Heroine
 ## Archive ALL Discord messages in a guild.
 
+### [What do the outputted fields stand for?](/fields.md)
+
+### [Want to view your archives? Click here for S.A.R.A.H. Viewer!](https://github.com/kararty/sarah-viewer)
+
 ### 10 Step Setup.
   1. Get & Install NodeJS, version **8.1.2 or newer**.
   2. **Make sure you have enough disk space.**
@@ -9,21 +13,22 @@
   5. Open up `settings.js` with any text program:
 ```js
 module.exports = {
-  auto: false, /* Will run automatically on a schedule based on 'CRON'.
+  auto: false, /* If enabled the script will run automatically on a schedule based on 'CRON'.
   Disable this if you're running your own OS CRON system script. */
-  debug: true, // Will display debug related messages to your console. (Really spammy.)
-  CRON: '0 0 */1 * *', // This example 'CRON' will run archiver at every midnight (00:00).
+  debug: true, // If enabled this will display debug related messages in your console. (Really spammy.)
+  CRON: '0 0 */1 * *', /* This example 'CRON' will run archiver at every midnight (00:00).
+  Only works if 'auto' is 'true'. */
   acceptTOS: false, /* Enable this if you're running your own OS CRON system script.
   Please read this https://discordapp.com/developers/docs/legal before enabling. */
   fullArchive: false, /* Enable this if you want every archive to contain ALL (from beginning to end) messages.
   First archives are not affected. */
-  authtoken: '', // Bot account is preferred.
-  guildID: '', // While in developer mode, right click the server icon and click 'Copy ID'.
-  /* Want to archive absolutely EVERYTHING, including DMs? Put in ''ALL''.
+  authtoken: '', // (REQUIRED) Bot account is preferred.
+  guildID: '', /* (REQUIRED) While in developer mode, right click the server icon and click 'Copy ID'.
+  Want to archive absolutely EVERYTHING, including DMs? Put in ''ALL''.
   NOTE: This may hang the process and/or ratelimit your access to Discord. */
   channels: [], /* While in developer mode, right click every channel you want to archive and click 'Copy ID'.
   Make sure you wrap the channel ID with apostrophes (''). Leave empty ('[]') for all channels.
-  May, or may not, work together with 'guildID: 'ALL'' */
+  Works together with 'guildID: 'ALL'' if you want to archive specific channels not in guilds. */
   messagesEveryFile: 100000, /* Amount of max messages in every file.
   Default of 100000 is limiting every file size at around 20-50 MB. */
   formatOutput: {
@@ -47,13 +52,9 @@ module.exports = {
   10. Your archives will go under the folder `archive` as a .zip file with a guild name(guild id) + timestamp filename. If auto is enabled, program will idle until parsed CRON schedule hits.
  * **Note:** If you're archiving REALLY big servers, make sure to change `messagesEveryFile` variable in settings.js. However, default value of `100000` SHOULD suffice.
 
-### [Want to view your archives? Click here for S.A.R.A.H. Viewer!](https://github.com/kararty/sarah-viewer)
-
 ### Prerequisites
  * NodeJS version >= 8.1.2
  * Enough disk space. **(100000 messages is around 20-50 MB in file size.)**
-
-### [What do the fields stand for?](/fields.md)
 
 ### Contributors
 * [Tonkku107](https://github.com/tonkku107/) - [Website](https://tonkku.me/)
