@@ -20,6 +20,9 @@ if (settings.authtoken === '') {
         if (Number.isInteger(Number(answer))) {
           settings.guildID = answer
           termsOfService()
+        } else if (answer === 'ALL') {
+          settings.guildID = answer
+          termsOfService()
         } else question()
       })
       question()
@@ -28,6 +31,9 @@ if (settings.authtoken === '') {
 } else if (settings.guildID === '') {
   let question = () => rlSettings.question('No guildID provided in settings.js, \nplease enter it manually.\nguildID: ', answer => {
     if (Number.isInteger(Number(answer))) {
+      settings.guildID = answer
+      termsOfService()
+    } else if (answer === 'ALL') {
       settings.guildID = answer
       termsOfService()
     } else question()
@@ -147,8 +153,8 @@ function start () {
       return fetchMore(channel, null, settings.fullArchive ? null : counter[channel.id].lastMsgId)
     })
     ).then(g => {
-      g = g.filter(function (e) { return e }) // Filter empties.
-      let gs = g.filter(g => !!g.id)
+      g = Array.from(new Set(g)) // Make unique.
+      let gs = g.filter(function (e) { return e }) // Filter empties.
       if (gs.length > 0) {
         let finished = []
         gs.forEach(guildOrChannel => finished.push(false))
@@ -275,7 +281,7 @@ function start () {
             guildDetails = {
               n: channel.name,
               i: channel.id,
-              u: channel.iconURL ? channel.iconURL : undefined,
+              u: channel.iconURL ? channel.iconURL : channel.me ? undefined : channel.recipient.displayAvatarURL,
               m: channel.recipients ? channel.recipients.size : undefined,
               mn: nicks,
               t: channel.createdTimestamp,
@@ -331,7 +337,7 @@ function start () {
           debug('DEBUG-ONLY: Starting compression! Please wait, this may take time.')
           let output = fs.createWriteStream(path.join(__dirname, 'archive', `${guildOrChannel.name ? `${guildOrChannel.name}_${guildOrChannel.id}` : `${guildOrChannel.recipient.username}_${guildOrChannel.id}`}`, `archive_${guildOrChannel.name ? `${guildOrChannel.name}(${guildOrChannel.id})` : `${guildOrChannel.recipient.username}(${guildOrChannel.id})`}_${date}.zip`))
           output.on('close', () => {
-            console.log('Finished archiving!', new Date().toString())
+            console.log(`Finished archiving ${guildOrChannel.name ? guildOrChannel.name : guildOrChannel.id}!`, new Date().toString())
             finished[index] = true
             debug(`DEBUG-ONLY: ${finished.filter(i => i === true).length} / ${finished.length}`)
             if (!finished.includes(false)) {
@@ -348,10 +354,7 @@ function start () {
           let archive = archiver('zip')
           archive.pipe(output)
           archive.glob('**/*', { cwd: path.join(__dirname, 'temp', guildOrChannel.id), src: ['**/*'], expand: true })
-          archive.finalize((err, bytes) => {
-            if (err) throw err
-            // #Not working# if (settings.debug) console.log('Finished compressing! Total bytes', bytes, '\nNot done yet! Please wait...')
-          })
+          archive.finalize()
         })
       } else {
         console.log('Nothing to archive this time!', new Date().toString())
