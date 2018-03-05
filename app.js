@@ -17,10 +17,7 @@ if (settings.authtoken === '') {
     settings.authtoken = answer
     if (settings.guildID === '') {
       let question = () => rlSettings.question('\nNo guildID provided in settings.js, \nplease enter it manually.\nguildID: ', answer => {
-        if (Number.isInteger(Number(answer))) {
-          settings.guildID = answer
-          termsOfService()
-        } else if (answer === 'ALL') {
+        if (Number.isInteger(Number(answer)) || answer === 'ALL') {
           settings.guildID = answer
           termsOfService()
         } else question()
@@ -30,10 +27,7 @@ if (settings.authtoken === '') {
   })
 } else if (settings.guildID === '') {
   let question = () => rlSettings.question('No guildID provided in settings.js, \nplease enter it manually.\nguildID: ', answer => {
-    if (Number.isInteger(Number(answer))) {
-      settings.guildID = answer
-      termsOfService()
-    } else if (answer === 'ALL') {
+    if (Number.isInteger(Number(answer)) || answer === 'ALL') {
       settings.guildID = answer
       termsOfService()
     } else question()
