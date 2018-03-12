@@ -115,37 +115,39 @@ function start () {
       console.log('Creating archive directory.')
       fs.mkdirSync(path.join(__dirname, 'archive'))
     }
+    debug(`DEBUG-ONLY: ${guildID}`)
     Promise.all(client.channels.filter(i => {
       if (settings.channels.length > 0) {
         return i.type === 'text' ? settings.channels.includes(i.id) : i.type === 'dm' ? settings.channels.includes(i.recipient.id) : i.type === 'group' ? (settings.channels.includes(i.ownerID) || settings.channels.includes(i.id)) : false
       } else return true
-    }).filter(i => i.guild ? i.guild.available : true).filter(i => (guildID ? (i.guild ? i.guild.id === guildID : false) : true) && i.type === 'text' ? (i.permissionsFor(client.user.id).has('READ_MESSAGES') && i.permissionsFor(client.user.id).has('READ_MESSAGE_HISTORY')) : true).filter(i => (i.type === 'text' || i.type === 'dm' || i.type === 'group')).map(channel => {
-      console.log('Starting archive for:', channel.id, channel.name ? channel.name : '')
-      // Initializing channel specific objects.
-      object[channel.id] = {
-        c: {
-          n: channel.name,
-          i: channel.id,
-          to: channel.topic ? channel.topic : undefined
-        },
-        g: channel.guild ? {
-          n: channel.guild.name,
-          i: channel.guild.id
-        } : undefined,
-        r: {},
-        u: {},
-        m: []
-      }
-      if (!counter[channel.id]) {
-        counter[channel.id] = {
-          nextCount: settings.messagesEveryFile,
-          count: 0,
-          atSplit: 0,
-          lastMsgId: null
+    }).filter(i => i.type === 'text' ? (i.permissionsFor(client.user.id).has('READ_MESSAGES') && i.permissionsFor(client.user.id).has('READ_MESSAGE_HISTORY')) : true)
+      .filter(i => i.guild ? i.guild.available : true).filter(i => (guildID ? (i.guild ? (i.guild.id === guildID) : false) : true)).filter(i => (i.type === 'text' || i.type === 'dm' || i.type === 'group')).map(channel => {
+        console.log('Starting archive for:', channel.id, channel.name ? channel.name : '')
+        // Initializing channel specific objects.
+        object[channel.id] = {
+          c: {
+            n: channel.name,
+            i: channel.id,
+            to: channel.topic ? channel.topic : undefined
+          },
+          g: channel.guild ? {
+            n: channel.guild.name,
+            i: channel.guild.id
+          } : undefined,
+          r: {},
+          u: {},
+          m: []
         }
-      }
-      return fetchMore(channel, null, settings.fullArchive ? null : counter[channel.id].lastMsgId)
-    })
+        if (!counter[channel.id]) {
+          counter[channel.id] = {
+            nextCount: settings.messagesEveryFile,
+            count: 0,
+            atSplit: 0,
+            lastMsgId: null
+          }
+        }
+        return fetchMore(channel, null, settings.fullArchive ? null : counter[channel.id].lastMsgId)
+      })
     ).then(g => {
       g = Array.from(new Set(g)) // Make unique.
       let gs = g.filter(function (e) { return e }) // Filter empties.
@@ -637,7 +639,7 @@ function start () {
   }).once('ready', () => {
     // Setup for deleted messages, functionality will only work if 'auto' is true.
     client.channels.filter(i => i.type === 'text' ? (i.permissionsFor(client.user.id).has('READ_MESSAGES') && i.permissionsFor(client.user.id).has('READ_MESSAGE_HISTORY')) : true)
-      .filter(i => (i.type === 'text' || i.type === 'dm' || i.type === 'group')).forEach(channel => {
+      .filter(i => guildID ? i.type === 'text' : (i.type === 'text' || i.type === 'dm' || i.type === 'group')).forEach(channel => {
         if (guildID ? channel.guild.id === guildID : true) {
           if (!deleted[channel.id]) deleted[channel.id] = []
           if (deleted[channel.id]) debug(`DEBUG-ONLY: Setting up in-memory deletion array for ${channel.id} - ${channel.type}`)
