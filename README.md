@@ -54,7 +54,7 @@ module.exports = {
 
 ### Prerequisites
  * NodeJS version >= 8.1.2
- * Enough disk space. **(100000 messages is around 20-50 MB in file size.)**
+ * Enough disk space. **(100000 messages is around 10-30 MB in file size.)**
 
 ### Contributors
 * [Tonkku107](https://github.com/tonkku107/) - [Website](https://tonkku.me/)
