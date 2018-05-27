@@ -10,7 +10,7 @@ npm-debug.log*
 .vscode/
 
 # Dependency directories
-node_modules/
+node_modules/**/*
 
 # Optional npm cache directory
 .npm
@@ -22,8 +22,8 @@ node_modules/
 .env
 
 # Archive folder(s)
-archive/
-temp/
+archive/**/*
+temp/**/*
 
 # Settings
 settings.js
