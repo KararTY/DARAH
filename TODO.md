@@ -1,7 +1,7 @@
 ## SARA-...
 ## ... Project rename.
   - [ ] Server Auto Record Archiver Heroine
-  - [*] Discord Auto Record Archiver Heroine
+  - [x] Discord Auto Record Archiver Heroine
 ## DARAH REWORK
 ### What is the goal of this rework?
   * Increase optimization
