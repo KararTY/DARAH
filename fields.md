@@ -69,32 +69,34 @@
 * `_by.u`: **string** Account icon avatar url
 * `_by.b`: **boolean** Account if bot
 * `_app`: **string**
-
+### [INFO]users.json
+* `[string]`: **[string]{}** Member id
+* `[string].n`: **string** Member discord username
+* `[string].nn`: **string** Member guild nickname if exists
+* `[string].tg`: **string** Member discord tag
+* `[string].a`: **string** Member discord icon avatar url
+* `[string].b`: **boolean** Member discord account if bot
+* `[string].t`: **Date** Member discord account creation
+* `[string].r`: **Array** Member guild roles
+### [INFO]roles.json
+* `[string]`: **[string]{}** Role id
+* `[string].n`: **string** Role name
+* `[string].p`: **number** Role permissions number
+* `[string].c`: **string** Role hex color
+### [INFO]emojis.json
+* `[string]`: **[string]{}** Reaction emoji id
+* `[string].c`: **string** Raction identifier
+* `[string].n`: **string** Reaction name
+* `[string].e`: **string** Reaction in unicode if applicable
 ### [CHANNEL]channel-name(channel id).json
-* `c`: **Object** Channel
+* `c`: **Object** Channel information object
 * `c.n`: **string** Channel name
 * `c.i`: **string** Channel id
 * `c.to`: **string** Channel topic
-* `g`: **Object** Guild information
+* `g`: **Object** Guild information object
 * `g.n`: **string** Guild name
 * `g.i`: **string** Guild id
-* `r`: **Object** Roles
-* `r[string].n`: **string** Role name
-* `r[string].p`: **number** Role permissions number
-* `r[string].c`: **string** Role hex color
-* `u`: **Object** Members
-* `u[string].n`: **string** Member discord username
-* `u[string].nn`: **string** Member guild nickname if exists
-* `u[string].tg`: **string** Member discord tag
-* `u[string].a`: **string** Member discord icon avatar url
-* `u[string].b`: **boolean** Member discord account if bot
-* `u[string].t`: **Date** Member discord account creation
-* `u[string].r`: **Array** Member guild roles
 * `u[string].r[]`: **string** Guild role id
-* `e`: **Object** Reaction emojis
-* `e[string].c`: **string** Message reaction identifier
-* `e[string].n`: **string** Message reaction name
-* `e[string].e`: **string** Message reaction in unicode if applicable
 * `m`: **Array{}** Messages
 * `m[].i`: **string** Message id
 * `m[].u`: **string** Message author id

@@ -15,6 +15,7 @@ module.exports = {
     overwrite: false, // Use this to overwrite all custom settings with predefined ones.
     overwriteType: 2, // -1 anonymize, 0 minimum, 1 medium, 2 maximum
     defaultSettings: {
+      everyMessages: 100000, // Create new file every X messages.
       channels: {
         id: true,
         name: true,
