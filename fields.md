@@ -80,19 +80,21 @@
 * `g.i`: **string** Guild id
 * `r`: **Object** Roles
 * `r[string].n`: **string** Role name
-* `r[string].i`: **string** Role id
 * `r[string].p`: **number** Role permissions number
 * `r[string].c`: **string** Role hex color
 * `u`: **Object** Members
 * `u[string].n`: **string** Member discord username
-* `u[string].i`: **string** Member discord id
 * `u[string].nn`: **string** Member guild nickname if exists
 * `u[string].tg`: **string** Member discord tag
 * `u[string].a`: **string** Member discord icon avatar url
 * `u[string].b`: **boolean** Member discord account if bot
 * `u[string].t`: **Date** Member discord account creation
 * `u[string].r`: **Array** Member guild roles
-* `u[string].r[]`: s**tring** Guild role id
+* `u[string].r[]`: **string** Guild role id
+* `e`: **Object** Reaction emojis
+* `e[string].c`: **string** Message reaction identifier
+* `e[string].n`: **string** Message reaction name
+* `e[string].e`: **string** Message reaction in unicode if applicable
 * `m`: **Array{}** Messages
 * `m[].i`: **string** Message id
 * `m[].u`: **string** Message author id
@@ -123,6 +125,10 @@
 * `m[].c.e[].ti`: **string** Message embed title
 * `m[].c.e[].ty`: **string** Message embed type
 * `m[].c.e[].v`: **string** Message embed video url if exists
+* `m[].c.r`: **Array{}** Message reactions if exists
+* `m[].c.r[].u`: **Array** Message reaction users
+* `m[].c.r[].u[]`: **string** Message reaction user id
+* `m[].c.r[].i`: **string** Message reaction id
 * `m[].t`: **Date** Message creation timestamp
 * `m[].p`: **boolean** Message is pinned if applicable
 * `m[].e`: **Date** Message last edit timestamp if applicable
@@ -162,6 +168,9 @@
 * `d[].c.e[].ti`: **string** Deleted message embed title
 * `d[].c.e[].ty`: **string** Deleted message embed type
 * `d[].c.e[].v`: **string** Deleted message embed video url if exists
+* `d[].c.r`: **Array{}** Deleted message reactions if exists
+* `d[].c.r[].u`: **Array** Deleted message reaction users
+* `d[].c.r[].u[]`: **string** Deleted message reaction user id
 * `d[].t`: **Date** Deleted message creation timestamp
 * `d[].p`: **boolean** Deleted message is pinned if applicable
 * `d[].e`: **Date** Deleted message last edit timestamp if applicable
@@ -169,5 +178,5 @@
 * `d[].s`: **boolean** Deleted message if system
 * `d[].ty`: **boolean** Deleted message type if applicable
 * `d[].ts`: **boolean** Deleted message text to speech if used
-* `d[].es`: **Array{}** Deleted message edits if exists (Not working)
+* `d[].es`: **Array{}** Deleted message edits if exists *(Not working)*
 * `d[].es[string]:` **string** Deleted message edit content

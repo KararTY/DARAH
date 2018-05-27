@@ -1,14 +1,15 @@
 {
-  "name": "serverautorecordarchiverheroine",
-  "version": "3.6.3",
+  "name": "discordautorecordarchiverheroine",
+  "version": "4.0.0a",
   "description": "",
-  "main": "app.js",
+  "main": "initialize.js",
   "scripts": {
+    "start": "node ./initialize.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
     "discord",
-    "archive",
+    "archiver",
     "discordapp",
     "log messages",
     "save messages",
@@ -27,7 +28,7 @@
   "dependencies": {
     "rimraf": "^2.6.2",
     "archiver": "^2.1.1",
-    "cron-parser": "^2.4.4",
-    "discord.js": "^11.3.0"
+    "cron-parser": "^2.5.0",
+    "discord.js": "^11.3.2"
   }
 }
