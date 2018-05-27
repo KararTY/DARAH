@@ -171,6 +171,7 @@
 * `d[].c.r`: **Array{}** Deleted message reactions if exists
 * `d[].c.r[].u`: **Array** Deleted message reaction users
 * `d[].c.r[].u[]`: **string** Deleted message reaction user id
+* `m[].c.r[].i`: **string** Deelted message reaction id
 * `d[].t`: **Date** Deleted message creation timestamp
 * `d[].p`: **boolean** Deleted message is pinned if applicable
 * `d[].e`: **Date** Deleted message last edit timestamp if applicable
