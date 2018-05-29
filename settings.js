@@ -12,9 +12,12 @@ module.exports = {
     DIRECTMESSAGES: [], // User ids. Use 'ALL' for all.
     tempDir: __dirname, // Put temp directory here. (__dirname)
     archiveDir: __dirname, // Put archive directory here. (__dirname)
-    overwrite: false, // Use this to overwrite all custom settings with predefined ones.
-    overwriteType: 2, // -1 anonymize, 0 minimum, 1 medium, 2 maximum
-    defaultSettings: {
+    auto: {
+      enabled: true,
+      cronSchedule: '0 0 */1 * *' // This example cron schedule ('0 0 */1 * *') will run archiver every midnight (00:00).
+    },
+    overrule: false, // Use this to overrule all available custom guild archive options with the one below.
+    defaultOptions: {
       everyMessages: 100000, // Create new file every X messages.
       channels: {
         id: true,
@@ -45,7 +48,7 @@ module.exports = {
         channels: true,
         users: true
       },
-      download: {
+      downloads: {
         icons: true,
         images: true,
         emojis: true,
@@ -54,12 +57,13 @@ module.exports = {
         textFiles: true,
         misc: true
       },
-      trackAndArchiveDeletedMessages: true,
+      trackAndArchiveDeletedMessages: true, // Only works when auto is enabled.
       output: {
         appendWhoArchived: true,
         formatted: false,
         whiteSpace: 2
       }
     }
-  }
+  },
+  debug: true
 }
