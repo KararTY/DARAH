@@ -22,8 +22,8 @@ node_modules/**/*
 .env
 
 # Archive folder(s)
-archive/**/*
-temp/**/*
+DARAH_ARCHIVES/**/*
+DARAH_TEMP/**/*
 
 # Settings
 settings.js

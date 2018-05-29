@@ -86,7 +86,7 @@
     * `[string].c`: **string** Role hex color
 ### [INFO]emojis.json
   * `[string]`: **[string]{}** Reaction emoji id
-    * `[string].c`: **string** Raction identifier
+    * `[string].c`: **string** Reaction identifier
     * `[string].n`: **string** Reaction name
     * `[string].e`: **string** Reaction in unicode if applicable
 ### [CHANNEL]channel-name(channel id).json
@@ -173,7 +173,7 @@
       * `d[].c.r`: **Array{}** Deleted message reactions if exists
         * `d[].c.r[].u`: **Array** Deleted message reaction users
           * `d[].c.r[].u[]`: **string** Deleted message reaction user id
-        * `m[].c.r[].i`: **string** Deelted message reaction id
+        * `m[].c.r[].i`: **string** Deleted message reaction id
     * `d[].t`: **Date** Deleted message creation timestamp
     * `d[].p`: **boolean** Deleted message is pinned if applicable
     * `d[].e`: **Date** Deleted message last edit timestamp if applicable
