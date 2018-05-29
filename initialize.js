@@ -5,9 +5,9 @@
 
 const settings = require('./settings.js')
 
-const backupOptions = {
+const backup = {
   defaultOptions: {
-    everyMessages: 100000,
+    everyMessages: 100000, // Create new file every X messages.
     channels: {
       id: true,
       name: true,
@@ -37,7 +37,7 @@ const backupOptions = {
       channels: true,
       users: true
     },
-    download: {
+    downloads: {
       icons: true,
       images: true,
       emojis: true,
@@ -46,7 +46,7 @@ const backupOptions = {
       textFiles: true,
       misc: true
     },
-    trackAndArchiveDeletedMessages: true,
+    trackAndArchiveDeletedMessages: true, // Only works when auto is enabled.
     output: {
       appendWhoArchived: true,
       formatted: false,
