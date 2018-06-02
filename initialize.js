@@ -5,6 +5,8 @@
 
 const settings = require('./settings.js')
 
+const discord = require('./src/discord.js')
+
 const backup = {
   defaultOptions: {
     everyMessages: 100000, // Create new file every X messages.
@@ -236,44 +238,79 @@ if (settings.archiving.auto.enabled) {
     })
   }
 }
+inquirer.prompt({
+  type: 'list',
+  name: 'acceptTOS',
+  message: chalk`Have you read and accepted Discord's Developer Terms of Service?\n{blue.underline https://discordapp.com/developers/docs/legal}\nDo you understand that you have to take all\nresponsibility for any and all consequences as a\nresult of running this script?`,
+  choices: ['Yes', 'No']
+}).then(answer => {
+  if (answer['acceptTOS'] === 'No') {
+    ui.log.write(chalk`{redBright Warning:} {redBright.bold ToS not accepted, please uninstall script.}`)
+    process.exit(0)
+  }
 
-if (questions.length > 0) {
-  inquirer.prompt(questions).then(answers => {
-    delete answers['discordToken'] // Delete it, we do not save it.
+  if (questions.length > 0) {
+    inquirer.prompt(questions).then(answers => {
+      delete answers['discordToken'] // Get rid of it.
 
-    if (typeof answers['tempDir'] === 'string') {
-      settings.archiving.tempDir = answers['tempDir'].length === 0
-        ? __dirname
-        : answers['tempDir'].trim()
-    }
-    if (typeof answers['archiveDir'] === 'string') {
-      settings.archiving.archiveDir = answers['archiveDir'].length === 0
-        ? __dirname
-        : answers['archiveDir'].trim()
-    }
-    if (typeof answers['cronSchedule'] === 'string') {
-      settings.archiving.auto.cronSchedule = answers['cronSchedule'].length === 0
-        ? '0 0 */1 * *'
-        : answers['cronSchedule'].trim()
-    }
+      if (typeof answers['tempDir'] === 'string') {
+        settings.archiving.tempDir = answers['tempDir'].length === 0
+          ? __dirname
+          : answers['tempDir'].trim()
+      }
+      if (typeof answers['archiveDir'] === 'string') {
+        settings.archiving.archiveDir = answers['archiveDir'].length === 0
+          ? __dirname
+          : answers['archiveDir'].trim()
+      }
+      if (typeof answers['cronSchedule'] === 'string') {
+        settings.archiving.auto.cronSchedule = answers['cronSchedule'].length === 0
+          ? '0 0 */1 * *'
+          : answers['cronSchedule'].trim()
+      }
 
-    // Validation passed.
-    if (answers.length > 0) {
-      inquirer.prompt({
-        type: 'list',
-        name: 'saveSettings',
-        message: 'Do you want to save your choices to settings.js?',
-        choices: ['Yes', 'No']
-      }).then(answers => {
-        if (answers['saveSettings'] === 'Yes') {
-          fs.writeFileSync(path.join(__dirname, 'settings.js'), applyNewSettings())
-          // After that is complete, initialize auto or single-use.
-        }
-      })
-    } else {
-      // Just token was changed, probably, initialize auto or single-use.
-    }
-  })
-} else {
-  // Initialize auto or single-use.
+      // Validation passed.
+      if (answers.length > 0) {
+        inquirer.prompt({
+          type: 'list',
+          name: 'saveSettings',
+          message: 'Do you want to save your choices to settings.js?',
+          choices: ['Yes', 'No']
+        }).then(answers => {
+          if (answers['saveSettings'] === 'Yes') {
+            fs.writeFileSync(path.join(__dirname, 'settings.js'), applyNewSettings())
+            // After that is complete, initialize auto or single-use.
+            start()
+          }
+        })
+      } else {
+        // Just token was inputted, probably, initialize auto or single-use.
+        start()
+      }
+    })
+  } else {
+    // Initialize auto or single-use.
+    start()
+  }
+})
+
+function start () {
+  let date = Date.now()
+  ui.updateBottomBar(chalk`{green.bold Next archive at} {green.bold.underline ${settings.archiving.auto.enabled ? cronParser.parseExpression(settings.archiving.auto.cronSchedule).next().toString() : new Date(date).toString()}}{green.bold .}`)
+  setTimeout(() => {
+    discord(client, settings, {ui, chalk}, date).then(res => {
+      // All done
+      ui.log.write(chalk`{green.bold Done! It took ~${Number(((Date.now() - date) / 1000) / 60).toFixed(0)} minutes to finish.}`)
+
+      if (settings.archiving.auto.enabled) {
+        ui.updateBottomBar(chalk`{green.bold Next archive at} {green.bold.underline ${cronParser.parseExpression(settings.archiving.auto.cronSchedule).next().toString()}}{green.bold .}`)
+        setTimeout(() => {
+          start()
+        }, new Date(cronParser.parseExpression(settings.archiving.auto.cronSchedule).next()) - Date.now())
+      } else {
+        ui.updateBottomBar(chalk`{green.bold Thank you for using DARAH.}`)
+        process.exit(0)
+      }
+    })
+  }, settings.archiving.auto.enabled ? new Date(cronParser.parseExpression(settings.archiving.auto.cronSchedule).next()) - Date.now() : 0)
 }

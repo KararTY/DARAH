@@ -1,4 +1,5 @@
 # Fields & Directories
+**Note:** Still missing a few new, as well as changed, fields.
 ### [GUILD_INFO]guild name(guild id).json
   * `n`: **string** Guild name
   * `i`: **string** Guild id
@@ -11,13 +12,7 @@
     * `af.e`: **boolean** Guild if afk channel exists
     * `af.i`: **string** Guild afk channel id if exists
     * `af.t`: **number** Guild afk channel timeout in seconds
-  * `o`: **Object** Guild owner information
-    * `o.n`: **string** Guild owner username
-    * `o.i`: **string** Guild owner id
-    * `o.ai`: **string** Guild owner applicationId if exists
-    * `o.nn`: **string** Guild owner nickname in guild if exists
-    * `o.tg`: **string** Guild owner discord tag
-    * `o.u`: **string** Guild owner avatar icon url
+  * `o`: **string** Guild owner user id
   * `re`: **string** Guild server region
   * `s`: **string** Guild Partner splash icon url if exists
   * `e`: **number** Guild explicit content filter level
@@ -46,18 +41,6 @@
     * `r[].mg`: **boolean** Guild role if is managed by third party(?)
     * `r[].me`: **boolean** Guild role if is mentionable
     * `r[].p`: **number** Guild role permissions number
-  * `c`: **Array{}** Guild channels
-    * `c[].n`: **string** Guild channel name
-    * `c[].i`: **string** Guild channel id
-    * `c[].ty`: **string** Guild channel type
-    * `c[].po`: **number** Guild channel position
-    * `c[].t`: **Date** Guild channel creation timestamp
-    * `c[].pa`: **Object** Guild channel if channel has parent
-      * `c[].pa.n`: **string** Guild channel parent name
-      * `c[].pa.i`: **string** Guild channel parent id
-    * `c[].p`: **Array{}** Guild channel permission overwrites if exists
-      * `c[].p[].i`: **string** Guild channel permission overwrite id
-      * `c[].p[].ty`: **string** Guild channel permission overwrite type
   * `_at`: **Object** Archival timestamps
     * `_at.t`: **Date** timestamp
     * `_at.s`: **string** Timestamp to human readable string if exists
@@ -89,14 +72,27 @@
     * `[string].c`: **string** Reaction identifier
     * `[string].n`: **string** Reaction name
     * `[string].e`: **string** Reaction in unicode if applicable
+    * `[string].a`: **string** Reaction is animated if applicable
+    * `[string].t`: **string** Reaction created date if applicable
+    * `[string].m`: **string** Reaction if managed if applicable
+    * `[string].u`: **string** Reaction url if applicable
+### [INFO]channels.json
+  * `[string]`: **[string]{}** Channel id
+    * `[string].n`: **string** Channel name
+    * `[string].to`: **string** Channel topic
+    * `[string].n`: **string** Channel name
+    * `[string].bit`: **string** Voice channel bitrate if applicable
+    * `[string].lim`: **string** Voice channel user limit if applicable
+    * `[string].ty`: **string** Channel type
+    * `[string].po`: **number** Channel position
+    * `[string].t`: **Date** Channel creation timestamp
+    * `[string].pa`: **Object** Channel if channel has parent
+      * `[string].pa.n`: **string** Channel parent name
+      * `[string].pa.i`: **string** Channel parent id
+    * `[string].p`: **Array{}** Channel permission overwrites if exists
+      * `[string].p[].i`: **string** Channel permission overwrite id
+      * `[string].p[].ty`: **string** Channel permission overwrite type
 ### [CHANNEL]channel-name(channel id).json
-  * `c`: **Object** Channel information object
-    * `c.n`: **string** Channel name
-    * `c.i`: **string** Channel id
-  * `c.to`: **string** Channel topic
-  * `g`: **Object** Guild information object
-    * `g.n`: **string** Guild name
-    * `g.i`: **string** Guild id
   * `m`: **Array{}** Messages
     * `m[].i`: **string** Message id
     * `m[].u`: **string** Message author id
@@ -189,3 +185,4 @@
     * `Channels/[channelId]` Directory for channel
   * `Users` Directory for user content
     * `Users/[userId]` Directory for user
+  * `Emojis` Directory for emojis
