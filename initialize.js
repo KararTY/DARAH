@@ -167,7 +167,7 @@ let loginQuestion = {
     client.once('ready', () => {
       ui.log.write(chalk`{green Log:} {green.bold Successfully authorized on Discord.}`)
       if (!loginFailed) ui.log.write(chalk`{green Log:} {green.bold Make it easier for yourself, enter Discord Authorization token in the 'settings.js' file next time!}`)
-      else ui.log.write(chalk`{green Log:} {green.bold Please correctly enter your Discord Authorization token in the 'settings.js' file next time!}`)
+      else ui.log.write(chalk`{redBright Warning:} {redBright.bold Please correctly enter your Discord Authorization token in the 'settings.js' file next time!}`)
       done(null, true)
     }).login(val).catch(e => {
       if (settings.debug) console.error(e)
@@ -265,6 +265,7 @@ inquirer.prompt({
         if (settings.debug) console.error(e)
         ui.log.write(chalk`{red Error:} {red.bold ${e.message}}`)
         client.removeAllListeners('ready')
+        loginFailed = true
         resolve(loginQuestion)
       })
     }))
