@@ -120,6 +120,8 @@ async function loadInstances (client, settings, logging, date) {
           m: []
         }
 
+        let auxilliaryCounter = 0
+
         let promises = []
 
         let channelOptions = settings.archiving.defaultOptions // Custom options
@@ -473,14 +475,17 @@ async function loadInstances (client, settings, logging, date) {
               // Loop through every message.
               msg.forEach(msg => {
                 if (!msg.system) {
-                // Check https://discord.js.org/#/docs/main/stable/class/Message to see what you can archive.
+                  auxilliaryCounter++
+
+                  // Check https://discord.js.org/#/docs/main/stable/class/Message to see what you can archive.
                   let attachments
                   if (channelOptions.messages.attachments && msg.attachments.size > 0) {
                     attachments = []
                     msg.attachments.forEach(attachment => {
-                      attachments.push({i: attachment.id, n: channelOptions.information.name ? attachment.filename : undefined, u: channelOptions.channels.id ? attachment.url : undefined})
+                      attachments.push({i: channelOptions.information.id ? attachment.id : auxilliaryCounter, n: channelOptions.information.name ? attachment.filename : undefined, u: channelOptions.channels.id ? attachment.url : undefined})
                       if (Object.entries(channelOptions.downloads).map(i => [1]).filter(Boolean).length > 0) {
                         promises.push(new Promise((resolve, reject) => {
+                          attachment.id = auxilliaryCounter
                           let a = attachment
                           let c = channel
                           let i = id
