@@ -239,7 +239,7 @@ async function loadInstances (client, settings, logging, date) {
                         })
                       } else resolve() // Whatever, couldn't get it.
                     }).catch(e => {
-                      if (settings.debug) logging.ui.log.write(e)
+                      if (settings.debug) console.error(e)
                       logging.ui.log.write(logging.chalk`{red Error:} {red.bold (${e.message}) Failed to download guild emoji ${o.findIndex(i => i.d === r.identifier)}, for ${i}.}`)
                       resolve() // We failed, tell user.
                     })
@@ -306,7 +306,7 @@ async function loadInstances (client, settings, logging, date) {
                     })
                   } else resolve() // Whatever, couldn't get it.
                 }).catch(e => {
-                  if (settings.debug) logging.ui.log.write(e)
+                  if (settings.debug) console.error(e)
                   logging.ui.log.write(logging.chalk`{red Error:} {red.bold (${e.message}) Failed to download guild icon for ${i}.}`)
                   resolve() // We failed, tell user.
                 })
@@ -518,7 +518,7 @@ async function loadInstances (client, settings, logging, date) {
                               } else resolve() // Not downloading.
                             } else resolve() // Whatever, couldn't get it.
                           }).catch(e => {
-                            if (settings.debug) logging.ui.log.write(e)
+                            if (settings.debug) console.error(e)
                             logging.ui.log.write(logging.chalk`{red Error:} {red.bold (${e.message}) Failed to download attachment ${a.id}, for ${i}.}`)
                             resolve() // We failed, tell user.
                           })
@@ -599,7 +599,7 @@ async function loadInstances (client, settings, logging, date) {
                                 })
                               } else resolve() // Whatever, couldn't get it.
                             }).catch(e => {
-                              if (settings.debug) logging.ui.log.write(e)
+                              if (settings.debug) console.error(e)
                               logging.ui.log.write(logging.chalk`{red Error:} {red.bold (${e.message}) Failed to download emoji ${object[i].e.findIndex(i => i.d === r.emoji.identifier)}, for ${i}.}`)
                               resolve() // We failed, tell user.
                             })
@@ -673,7 +673,7 @@ async function loadInstances (client, settings, logging, date) {
                             })
                           } else resolve() // Whatever, couldn't get it.
                         }).catch(e => {
-                          if (settings.debug) logging.ui.log.write(e)
+                          if (settings.debug) console.error(e)
                           logging.ui.log.write(logging.chalk`{red Error:} {red.bold (${e.message}) Failed to download user icon ${object[i].u.findIndex(i => i.i === m.id)}, for ${i}.}`)
                           resolve() // We failed, tell user.
                         })

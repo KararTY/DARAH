@@ -7,56 +7,6 @@ const settings = require('./settings.js')
 
 const discord = require('./src/discord.js')
 
-const backup = {
-  defaultOptions: {
-    everyMessages: 100000, // Create new file every X messages.
-    channels: {
-      id: true,
-      name: true,
-      topic: true
-    },
-    messages: {
-      id: true,
-      attachments: true,
-      embeds: true,
-      reactions: true
-    },
-    members: {
-      name: true,
-      id: true,
-      creationDate: true,
-      joinDate: true,
-      roles: true,
-      icon: true
-    },
-    guilds: {
-      id: true,
-      name: true,
-      icon: true,
-      owner: true,
-      emojis: true,
-      roles: true,
-      channels: true,
-      users: true
-    },
-    downloads: {
-      icons: true,
-      images: true,
-      emojis: true,
-      videos: true,
-      soundFiles: true,
-      textFiles: true,
-      misc: true
-    },
-    trackAndArchiveDeletedMessages: true, // Only works when auto is enabled.
-    output: {
-      appendWhoArchived: true,
-      formatted: false,
-      whiteSpace: 2
-    }
-  }
-}
-
 const applyNewSettings = () => {
   return `module.exports = {
   authentication: {
@@ -366,6 +316,9 @@ inquirer.prompt({
                 choices: ['Yes', 'No']
               }).then(answers => {
                 if (answers['saveSettings'] === 'Yes') {
+                  if (settings.debug) ui.log.write(chalk`{gray Debug:} {gray.bold Creating backup file of existing settings file.}`)
+                  fs.writeFileSync(path.join(__dirname, 'settings.js.bkp'), JSON.stringify(require('./settings.js'), null, 2))
+                  if (settings.debug) ui.log.write(chalk`{gray Debug:} {gray.bold Writing new data to settings file.}`)
                   fs.writeFileSync(path.join(__dirname, 'settings.js'), applyNewSettings())
                   // After that is complete, initialize auto or single-use.
                   start()
