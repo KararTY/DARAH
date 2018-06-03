@@ -24,6 +24,7 @@ node_modules/**/*
 # Archive folder(s)
 DARAH_ARCHIVES/**/*
 DARAH_TEMP/**/*
+TEST/**/*
 
 # Settings
 settings.js

@@ -322,7 +322,7 @@ inquirer.prompt({
                   fs.writeFileSync(path.join(__dirname, 'settings.js'), applyNewSettings())
                   // After that is complete, initialize auto or single-use.
                   start()
-                }
+                } else start()
               })
             } else {
               // Just token was inputted, probably, initialize auto or single-use.

@@ -11,7 +11,7 @@ function compress (object, settings, logging, date) {
   let index = 0
   return new Promise((resolve, reject) => {
     function zip (channel) {
-      if (channel.count > 0) {
+      if (channel.count.messages > 0) {
         let tempDir = path.join(settings.archiving.tempDir, 'DARAH_TEMP', channel.type + channels[index])
         let output = fs.createWriteStream(path.join(settings.archiving.archiveDir, 'DARAH_ARCHIVES', channel.type + channels[index], `archive_${channel.g.n || '?'}(${channel.g.i || '?'})_${date}.zip`))
         output.on('close', () => {

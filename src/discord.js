@@ -722,7 +722,7 @@ async function loadInstances (client, settings, logging, date) {
                   if (channelCache[id][channel.id].lastMsgId ? (Number(msg.id) > Number(channelCache[id][channel.id].lastMsgId)) : true) channelCache[id][channel.id].lastMsgId = msg.id
                 }
               })
-              logging.ui.updateBottomBar(logging.chalk`{green.bold Still downloading files...}`)
+              if (promises.length > 0) logging.ui.updateBottomBar(logging.chalk`{green.bold Still downloading files...}`)
               Promise.all(promises).then(res => {
                 // Check how many messages we've collected so far.
                 if (channelCache[id][channel.id].count >= channelCache[id][channel.id].nextCount) {
@@ -751,7 +751,7 @@ async function loadInstances (client, settings, logging, date) {
                 }
               })
             } else {
-              logging.ui.updateBottomBar(logging.chalk`{green.bold Still downloading files...}`)
+              if (promises.length > 0) logging.ui.updateBottomBar(logging.chalk`{green.bold Still downloading files...}`)
               Promise.all(promises).then(res => {
                 // We finished reading in this channel.
                 logging.ui.log.write(logging.chalk`{green Log:} {green.bold Finished archiving ${channel.id}.}`)

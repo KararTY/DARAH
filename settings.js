@@ -11,8 +11,8 @@ module.exports = {
     GUILDS: [], // Guild ids. Use 'ALL' for all.
     GROUPS: [], // Owner user id. Use 'ALL' for all.
     DIRECTMESSAGES: [], // User ids. Use 'ALL' for all.
-    tempDir: __dirname, // Put temp directory here. (__dirname)
-    archiveDir: __dirname, // Put archive directory here. (__dirname)
+    tempDir: '', // Put temp directory here. (__dirname)
+    archiveDir: '', // Put archive directory here. (__dirname)
     auto: {
       enabled: false,
       cronSchedule: '0 0 */1 * *' // This example cron schedule ('0 0 */1 * *') will run archiver every midnight (00:00).
@@ -22,43 +22,43 @@ module.exports = {
       fullArchive: true, // Archives everything from the beginning if enabled.
       everyMessages: 100000, // Create new file every X messages.
       channels: {
-        id: true,
+        id: false,
         name: true,
         topic: true,
         voice: true
       },
       messages: {
-        id: true,
+        id: false,
         attachments: true,
         embeds: true,
         reactions: true
       },
       members: {
-        name: true,
-        id: true,
+        name: false,
+        id: false,
         creationDate: true,
         joinDate: true,
         roles: true,
         icon: true
       },
       information: {
-        id: true,
-        name: true,
+        id: false,
+        name: false,
         icon: true,
         owner: true,
-        emojis: true,
+        emojis: false,
         roles: true,
         channels: true,
         users: true
       },
       downloads: {
-        icons: false,
-        images: false,
-        emojis: false,
-        videos: false,
-        audios: false,
-        texts: false,
-        misc: false
+        icons: true,
+        images: true,
+        emojis: true,
+        videos: true,
+        audios: true,
+        texts: true,
+        misc: true
       },
       trackAndArchiveDeletedMessages: true, // Only works when auto is enabled.
       output: {
