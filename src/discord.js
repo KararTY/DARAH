@@ -8,7 +8,7 @@ const compression = require('./compress')
 const fs = require('fs')
 const path = require('path')
 const rimraf = require('rimraf')
-const fetch = require('snekfetch')
+const fetch = require('node-fetch')
 
 // Global variables
 let deletedMessages = {}
@@ -17,6 +17,8 @@ let channelCache = {}
 
 // Load in guilds & user DMs
 async function loadInstances (client, settings, logging, date) {
+  const { red, green, underline, bold, gray } = logging.colors
+
   if (!settings) {
     settings = require('../settings.js')
   }
@@ -41,18 +43,18 @@ async function loadInstances (client, settings, logging, date) {
     ).map(i => i))
   }
   // Check if GUILDS contains 'ALL'
-  if (settings.archiving.GUILDS.findIndex(i => i === 'ALL') > -1) await channels.push(channelsoToRead.filter(i => i.type === 'text' && i.permissionsFor(client.user.id).has('READ_MESSAGES') && i.permissionsFor(client.user.id).has('READ_MESSAGE_HISTORY')).map(i => i))
+  if (settings.archiving.GUILDS.findIndex(i => i === 'ALL') > -1) await channels.push(channelsoToRead.filter(i => i.type === 'text' && i.memberPermissions(client.user.id).has('READ_MESSAGES') && i.memberPermissions(client.user.id).has('READ_MESSAGE_HISTORY')).map(i => i))
   else {
     await channels.push(channelsoToRead.filter(i => i.type === 'text' &&
       settings.archiving.GUILDS.includes(i.guild.id) && // Filter based on guild id & READ permissions.
-      i.permissionsFor(client.user.id).has('READ_MESSAGES') &&
-      i.permissionsFor(client.user.id).has('READ_MESSAGE_HISTORY')
+      i.memberPermissions(client.user.id).has('READ_MESSAGES') &&
+      i.memberPermissions(client.user.id).has('READ_MESSAGE_HISTORY')
     ).map(i => i))
   }
 
   channels = [].concat(...channels).filter(i => i.id)
 
-  logging.ui.log.write(logging.chalk`{green Log:} {gray.bold Archiving ${channels.length} channels.}`)
+  logging.ui.log.write(`${green('Log:')} ${gray(bold(`Archiving ${channels.length} channels.`))}`)
 
   // Purge & Create directory
   let oneTimer = []
@@ -60,48 +62,48 @@ async function loadInstances (client, settings, logging, date) {
     if (channel.type === 'text') {
       if (!fs.existsSync(path.join(settings.archiving.archiveDir, 'DARAH_ARCHIVES', '[GUILD]' + channel.guild.id))) {
         fs.mkdirSync(path.join(settings.archiving.archiveDir, 'DARAH_ARCHIVES', '[GUILD]' + channel.guild.id))
-        if (settings.debug) logging.ui.log.write(logging.chalk`{gray Debug:} {gray.bold Created archive directory for ${channel.guild.id} guild.}`)
+        if (settings.debug) logging.ui.log.write(`${gray('Debug:')} ${gray(bold(`Created archive directory for ${channel.guild.id} guild.`))}`)
       }
       // Create temp directory
       if (!fs.existsSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', '[GUILD]' + channel.guild.id))) {
         fs.mkdirSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', '[GUILD]' + channel.guild.id))
-        if (settings.debug) logging.ui.log.write(logging.chalk`{gray Debug:} {gray.bold Created cache directory for ${channel.guild.id} guild.}`)
+        if (settings.debug) logging.ui.log.write(`${gray('Debug:')} ${gray(bold(`Created cache directory for ${channel.guild.id} guild.`))}`)
       } else if (!oneTimer.includes(channel.guild.id)) {
         rimraf.sync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', '[GUILD]' + channel.guild.id))
         fs.mkdirSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', '[GUILD]' + channel.guild.id))
-        if (settings.debug) logging.ui.log.write(logging.chalk`{gray Debug:} {gray.bold Recreated cache directory for ${channel.guild.id} guild.}`)
+        if (settings.debug) logging.ui.log.write(`${gray('Debug:')} ${gray(bold(`Recreated cache directory for ${channel.guild.id} guild.`))}`)
       }
       channelCache[channel.guild.id] = {}
       oneTimer.push(channel.guild.id)
     } else if (channel.type === 'dm') {
       if (!fs.existsSync(path.join(settings.archiving.archiveDir, 'DARAH_ARCHIVES', '[DM]' + channel.recipient.id))) {
         fs.mkdirSync(path.join(settings.archiving.archiveDir, 'DARAH_ARCHIVES', '[DM]' + channel.recipient.id))
-        if (settings.debug) logging.ui.log.write(logging.chalk`{gray Debug:} {gray.bold Created archive directory for ${channel.recipient.id} dm channel.}`)
+        if (settings.debug) logging.ui.log.write(`${gray('Debug:')} ${gray(bold(`Created archive directory for ${channel.recipient.id} dm channel.`))}`)
       }
       // Create temp directory
       if (!fs.existsSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', '[DM]' + channel.recipient.id))) {
         fs.mkdirSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', '[DM]' + channel.recipient.id))
-        if (settings.debug) logging.ui.log.write(logging.chalk`{gray Debug:} {gray.bold Created cache directory for ${channel.recipient.id} dm channel.}`)
+        if (settings.debug) logging.ui.log.write(`${gray('Debug:')} ${gray(bold(`Created cache directory for ${channel.recipient.id} dm channel.`))}`)
       } else if (!oneTimer.includes(channel.recipient.id)) {
         rimraf.sync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', '[DM]' + channel.recipient.id))
         fs.mkdirSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', '[DM]' + channel.recipient.id))
-        if (settings.debug) logging.ui.log.write(logging.chalk`{gray Debug:} {gray.bold Recreated cache directory for ${channel.recipient.id} dm channel.}`)
+        if (settings.debug) logging.ui.log.write(`${gray('Debug:')} ${gray(bold(`Recreated cache directory for ${channel.recipient.id} dm channel.`))}`)
       }
       channelCache[channel.recipient.id] = {}
       oneTimer.push(channel.recipient.id)
     } else if (channel.type === 'group') {
       if (!fs.existsSync(path.join(settings.archiving.archiveDir, 'DARAH_ARCHIVES', '[GROUP]' + channel.id))) {
         fs.mkdirSync(path.join(settings.archiving.archiveDir, 'DARAH_ARCHIVES', '[GROUP]' + channel.id))
-        if (settings.debug) logging.ui.log.write(logging.chalk`{gray Debug:} {gray.bold Created archive directory for ${channel.id} group channel.}`)
+        if (settings.debug) logging.ui.log.write(`${gray('Debug:')} ${gray(bold(`Created archive directory for ${channel.id} group channel.`))}`)
       }
       // Create temp directory
       if (!fs.existsSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', '[GROUP]' + channel.id))) {
         fs.mkdirSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', '[GROUP]' + channel.id))
-        if (settings.debug) logging.ui.log.write(logging.chalk`{gray Debug:} {gray.bold Created cache directory for ${channel.id} group channel.}`)
+        if (settings.debug) logging.ui.log.write(`${gray('Debug:')} ${gray(bold(`Created cache directory for ${channel.id} group channel.`))}`)
       } else if (!oneTimer.includes(channel.id)) {
         rimraf.sync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', '[GROUP]' + channel.id))
         fs.mkdirSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', '[GROUP]' + channel.id))
-        if (settings.debug) logging.ui.log.write(logging.chalk`{gray Debug:} {gray.bold Recreated cache directory for ${channel.id} group channel.}`)
+        if (settings.debug) logging.ui.log.write(`${gray('Debug:')} ${gray(bold(`Recreated cache directory for ${channel.id} group channel.`))}`)
       }
       channelCache[channel.id] = {}
       oneTimer.push(channel.id)
@@ -136,7 +138,7 @@ async function loadInstances (client, settings, logging, date) {
           directory = path.join(settings.archiving.archiveDir, 'DARAH_ARCHIVES', '[GUILD]' + channel.guild.id)
           if (!settings.archiving.override && fs.existsSync(path.join(directory, 'settings.json'))) {
             channelOptions = require(path.join(directory, 'settings.json'))
-            channelCache[channel.guild.id][channel.id] = require(path.join(directory, 'cache.json'))[channel.id]
+            if (!channelOptions.fullArchive) channelCache[channel.guild.id][channel.id] = require(path.join(directory, 'cache.json'))[channel.id]
           }
           id = channel.guild.id
 
@@ -218,29 +220,31 @@ async function loadInstances (client, settings, logging, date) {
                     let r = item
                     let o = emojisInGuild
                     let i = id
-                    fetch.get(r.url).then(res => {
+                    fetch(r.url).then(res => {
                       if (res.ok) {
-                        let type = res.headers['content-type'].split('/')[1].toLowerCase()
+                        let type = res.headers.get('content-type').split('/')[1].toLowerCase()
                         if (!fs.existsSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads'))) {
                           // Create 'Downloads' directory.
-                          if (settings.debug) logging.ui.log.write(logging.chalk`{gray Debug:} {gray.bold Creating Downloads directory, for ${i}.}`)
+                          if (settings.debug) logging.ui.log.write(`${gray('Debug:')} ${gray(bold(`Creating Downloads directory, for ${i}.`))}`)
                           fs.mkdirSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads'))
                         }
                         if (!fs.existsSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads', 'Guild'))) {
                           // Create 'Channels' directory in 'Downloads' directory.
-                          if (settings.debug) logging.ui.log.write(logging.chalk`{gray Debug:} {gray.bold Creating Guild directory in Downloads directory, for ${i}.}`)
+                          if (settings.debug) logging.ui.log.write(`${gray('Debug:')} ${gray(bold(`Creating Guild directory in Downloads directory, for ${i}.`))}`)
                           fs.mkdirSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads', 'Guild'))
                         }
 
-                        fetch.get(r.url).pipe(fs.createWriteStream(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads', 'Guild', `${String(o.findIndex(i => i.d === r.identifier))}.${type}`))).on('finish', () => {
+                        const dest = fs.createWriteStream(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads', 'Guild', `${String(o.findIndex(i => i.d === r.identifier))}.${type}`))
+                        res.body.pipe(dest)
+                        dest.on('close', () => {
                           // Finally resolve.
-                          logging.ui.log.write(logging.chalk`{green Log:} {green.bold Completed download for guild emoji ${o.findIndex(i => i.d === r.identifier)}, for ${i}.}`)
+                          logging.ui.log.write(`${green('Log:')} ${green(bold(`Completed download for guild emoji ${o.findIndex(i => i.d === r.identifier)}, for ${i}.`))}`)
                           resolve()
                         })
                       } else resolve() // Whatever, couldn't get it.
                     }).catch(e => {
                       if (settings.debug) console.error(e)
-                      logging.ui.log.write(logging.chalk`{red Error:} {red.bold (${e.message}) Failed to download guild emoji ${o.findIndex(i => i.d === r.identifier)}, for ${i}.}`)
+                      logging.ui.log.write(`${red('Error:')} ${red(bold(`(${e.message}) Failed to download guild emoji ${o.findIndex(i => i.d === r.identifier)}, for ${i}.`))}`)
                       resolve() // We failed, tell user.
                     })
                   }))
@@ -285,29 +289,31 @@ async function loadInstances (client, settings, logging, date) {
             if (channelOptions.downloads.icons && channelOptions.information.icon && object[id].g.u) {
               promises.push(new Promise((resolve, reject) => {
                 let i = id
-                fetch.get(object[i].g.u).then(res => {
+                fetch(object[i].g.u).then(res => {
                   if (res.ok) {
-                    let type = res.headers['content-type'].split('/')[1].toLowerCase()
+                    let type = res.headers.get('content-type').split('/')[1].toLowerCase()
                     if (!fs.existsSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads'))) {
                       // Create 'Downloads' directory.
-                      if (settings.debug) logging.ui.log.write(logging.chalk`{gray Debug:} {gray.bold Creating Downloads directory, for ${i}.}`)
+                      if (settings.debug) logging.ui.log.write(`${gray('Debug:')} ${gray(bold(`Creating Downloads directory, for ${i}.`))}`)
                       fs.mkdirSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads'))
                     }
                     if (!fs.existsSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads', 'Guild'))) {
                       // Create 'Channels' directory in 'Downloads' directory.
-                      if (settings.debug) logging.ui.log.write(logging.chalk`{gray Debug:} {gray.bold Creating Guild directory in Downloads directory, for ${i}.}`)
+                      if (settings.debug) logging.ui.log.write(`${gray('Debug:')} ${gray(bold(`Creating Guild directory in Downloads directory, for ${i}.`))}`)
                       fs.mkdirSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads', 'Guild'))
                     }
 
-                    fetch.get(object[i].g.u).pipe(fs.createWriteStream(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads', 'Guild', `icon.${type}`))).on('finish', () => {
+                    const dest = fs.createWriteStream(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads', 'Guild', `icon.${type}`))
+                    res.body.pipe(dest)
+                    dest.on('close', () => {
                       // Finally resolve.
-                      logging.ui.log.write(logging.chalk`{green Log:} {green.bold Completed download for guild icon for ${i}.}`)
+                      logging.ui.log.write(`${green('Log:')} ${green(bold(`Completed download for guild icon for ${i}.`))}`)
                       resolve()
                     })
                   } else resolve() // Whatever, couldn't get it.
                 }).catch(e => {
                   if (settings.debug) console.error(e)
-                  logging.ui.log.write(logging.chalk`{red Error:} {red.bold (${e.message}) Failed to download guild icon for ${i}.}`)
+                  logging.ui.log.write(`${red('Error:')} ${red(bold(`(${e.message}) Failed to download guild icon for ${i}.`))}`)
                   resolve() // We failed, tell user.
                 })
               }))
@@ -323,7 +329,7 @@ async function loadInstances (client, settings, logging, date) {
           directory = path.join(settings.archiving.archiveDir, 'DARAH_ARCHIVES', '[DM]' + channel.recipient.id)
           if (!settings.archiving.override && fs.existsSync(path.join(directory, 'settings.json'))) {
             channelOptions = require(path.join(directory, 'settings.json'))
-            channelCache[channel.recipient.id][channel.id] = require(path.join(directory, 'cache.json'))[channel.id]
+            if (!channelOptions.fullArchive) channelCache[channel.recipient.id][channel.id] = require(path.join(directory, 'cache.json'))[channel.id]
           }
           id = channel.recipient.id
           if (!object[id]) {
@@ -389,7 +395,7 @@ async function loadInstances (client, settings, logging, date) {
           directory = path.join(settings.archiving.archiveDir, 'DARAH_ARCHIVES', '[GROUP]' + channel.id)
           if (!settings.archiving.override && fs.existsSync(path.join(directory, 'settings.json'))) {
             channelOptions = require(path.join(directory, 'settings.json'))
-            channelCache[channel.id][channel.id] = require(path.join(directory, 'cache.json'))[channel.id]
+            if (!channelOptions.fullArchive) channelCache[channel.id][channel.id] = require(path.join(directory, 'cache.json'))[channel.id]
           }
           id = channel.id
           if (!object[id]) {
@@ -456,7 +462,7 @@ async function loadInstances (client, settings, logging, date) {
         }
         let channelObject = {
           i: channel.id,
-          n: channelOptions.channels.name ? (channel.name || channel.owner.username || channel.recipient.username || undefined) : undefined,
+          n: channelOptions.channels.name ? (channel.name || (channel.owner ? channel.owner.username : undefined) || channel.recipient.username || undefined) : undefined,
           ty: channel.type || undefined,
           po: channel.calculatedPosition || 0,
           to: channelOptions.channels.topic ? (channel.topic || undefined) : undefined,
@@ -468,7 +474,7 @@ async function loadInstances (client, settings, logging, date) {
         else object[id].c.push(channelObject)
 
         function fetchMessages (channel, before, after) {
-          channel.fetchMessages({limit: 100, before: before, after: after}).then(msg => {
+          channel.fetchMessages({ limit: 100, before: before, after: after }).then(msg => {
             if (msg.size > 0) {
               let msgLast = msg.last()
               let msgFirst = msg.first()
@@ -482,44 +488,47 @@ async function loadInstances (client, settings, logging, date) {
                   if (channelOptions.messages.attachments && msg.attachments.size > 0) {
                     attachments = []
                     msg.attachments.forEach(attachment => {
-                      attachments.push({i: channelOptions.information.id ? attachment.id : auxilliaryCounter, n: channelOptions.information.name ? attachment.filename : undefined, u: channelOptions.channels.id ? attachment.url : undefined})
-                      if (Object.entries(channelOptions.downloads).map(i => [1]).filter(Boolean).length > 0) {
+                      attachments.push({ i: auxilliaryCounter, n: channelOptions.information.name ? attachment.filename : undefined, u: channelOptions.channels.id ? attachment.url : undefined })
+                      if (Object.entries(channelOptions.downloads).map(i => i[1]).filter(Boolean).length > 0) {
                         promises.push(new Promise((resolve, reject) => {
                           attachment.id = auxilliaryCounter
                           let a = attachment
                           let c = channel
                           let i = id
-                          fetch.get(a.url).then(res => {
+                          fetch(a.url).then(res => {
                             if (res.ok) {
-                              let type = res.headers['content-type'].split('/')[0].toLowerCase()
-                              let extension = res.headers['content-type'].split('/')[1].toLowerCase()
+                              let type = res.headers.get('content-type').split('/')[0].toLowerCase()
+                              let extension = res.headers.get('content-type').split('/')[1].toLowerCase()
                               let usualTypes = ['image', 'video', 'audio', 'text']
                               if ((type === 'image' && object[i].o.downloads.images) || (type === 'audio' && object[i].o.downloads.audios) || (type === 'text' && object[i].o.downloads.texts) || (type === 'video' && object[i].o.downloads.videos) || (usualTypes.indexOf(type) === -1 && object[i].o.downloads.misc)) {
                                 if (!fs.existsSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads'))) {
                                   // Create 'Downloads' directory.
-                                  if (settings.debug) logging.ui.log.write(logging.chalk`{gray Debug:} {gray.bold Creating Downloads directory, for ${i}.}`)
+                                  if (settings.debug) logging.ui.log.write(`${gray('Debug:')} ${gray(bold(`Creating Downloads directory, for ${i}.`))}`)
                                   fs.mkdirSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads'))
                                 }
                                 if (!fs.existsSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads', 'Channels'))) {
                                   // Create 'Channels' directory in 'Downloads' directory.
-                                  if (settings.debug) logging.ui.log.write(logging.chalk`{gray Debug:} {gray.bold Creating Channels directory in Downloads directory, for ${i}.}`)
+                                  if (settings.debug) logging.ui.log.write(`${gray('Debug:')} ${gray(bold(`Creating Channels directory in Downloads directory, for ${i}.`))}`)
                                   fs.mkdirSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads', 'Channels'))
                                 }
                                 if (!fs.existsSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads', 'Channels', String(c.calculatedPosition) || '0'))) {
                                   // Create directory for channel in 'Channels' directory.
-                                  if (settings.debug) logging.ui.log.write(logging.chalk`{gray Debug:} {gray.bold Creating directory for channel in Channels directory, for ${i}.}`)
+                                  if (settings.debug) logging.ui.log.write(`${gray('Debug:')} ${gray(bold(`Creating directory for channel in Channels directory, for ${i}.`))}`)
                                   fs.mkdirSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads', 'Channels', String(c.calculatedPosition) || '0'))
                                 }
-                                fetch.get(attachment.url).pipe(fs.createWriteStream(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads', 'Channels', String(c.calculatedPosition) || '0', `[${a.id}]${object[i].o.information.name ? `${a.filename}` : `.${extension}`}`))).on('finish', () => {
+
+                                const dest = fs.createWriteStream(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads', 'Channels', String(c.calculatedPosition) || '0', `[${a.id}]${object[i].o.information.name ? `${a.filename}` : `.${extension}`}`))
+                                res.body.pipe(dest)
+                                dest.on('close', () => {
                                   // Finally resolve.
-                                  logging.ui.log.write(logging.chalk`{green Log:} {green.bold Completed download for ${type} ${a.id}, for ${i}.}`)
+                                  logging.ui.log.write(`${green('Log:')} ${green(bold(`Completed download for ${type} ${a.id}, for ${i}.`))}`)
                                   resolve()
                                 })
                               } else resolve() // Not downloading.
                             } else resolve() // Whatever, couldn't get it.
                           }).catch(e => {
                             if (settings.debug) console.error(e)
-                            logging.ui.log.write(logging.chalk`{red Error:} {red.bold (${e.message}) Failed to download attachment ${a.id}, for ${i}.}`)
+                            logging.ui.log.write(`${red('Error:')} ${red(bold(`(${e.message}) Failed to download attachment ${a.id}, for ${i}.`))}`)
                             resolve() // We failed, tell user.
                           })
                         }))
@@ -561,9 +570,9 @@ async function loadInstances (client, settings, logging, date) {
                   if (channelOptions.messages.reactions && msg.reactions.size > 0) {
                     reactions = []
                     msg.reactions.forEach(reaction => {
-                      if (object[id].e.findIndex(i => i.d === reaction.emoji.identifier) === -1) {
-                        object[id].e.push({
-                          i: reaction.emoji.id,
+                      if (object[id].e.findIndex(i => i.d === reaction.emoji.identifier) === -1 || (reaction.emoji.id ? object[id].e.find(e => e.i === reaction.emoji.id).retry : false)) {
+                        let emoji = {
+                          i: reaction.emoji.id || undefined,
                           d: reaction.emoji.identifier,
                           n: reaction.emoji.name,
                           e: reaction.emoji.toString(),
@@ -571,46 +580,52 @@ async function loadInstances (client, settings, logging, date) {
                           a: reaction.emoji.animated ? true : undefined,
                           t: reaction.emoji.createdTimestamp ? reaction.emoji.createdTimestamp : undefined,
                           m: reaction.emoji.managed ? true : undefined,
-                          u: channelOptions.information.emojis ? reaction.emoji.url ? reaction.emoji.url : undefined : undefined
-                        })
+                          u: channelOptions.information.emojis ? reaction.emoji.url ? reaction.emoji.url : reaction.emoji.id ? `https://cdn.discordapp.com/emojis/${reaction.emoji.id}.${reaction.emoji.animated ? 'gif' : 'png'}` : undefined : undefined
+                        }
 
-                        if (channelOptions.downloads.emojis && reaction.emoji.url) {
+                        if (object[id].e.find(e => e.i === reaction.emoji.id) ? object[id].e.find(e => e.i === reaction.emoji.id).retry : false) {
+                          object[id].e[object[id].e.findIndex(e => e.i === reaction.emoji.id)] = emoji
+                        } else object[id].e.push(emoji)
+
+                        if (channelOptions.downloads.emojis && (reaction.emoji.url || reaction.emoji.id)) {
                           promises.push(new Promise((resolve, reject) => {
                             let r = reaction
                             let i = id
-                            fetch.get(r.emoji.url).then(res => {
+                            fetch(r.emoji.url || `https://cdn.discordapp.com/emojis/${reaction.emoji.id}.${reaction.emoji.animated ? 'gif' : 'png'}`).then(res => {
                               if (res.ok) {
-                                let type = res.headers['content-type'].split('/')[1].toLowerCase()
+                                let type = res.headers.get('content-type').split('/')[1].toLowerCase()
                                 if (!fs.existsSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads'))) {
                                   // Create 'Downloads' directory.
-                                  if (settings.debug) logging.ui.log.write(logging.chalk`{gray Debug:} {gray.bold Creating Downloads directory, for ${i}.}`)
+                                  if (settings.debug) logging.ui.log.write(`${gray('Debug:')} ${gray(bold(`Creating Downloads directory, for ${i}.`))}`)
                                   fs.mkdirSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads'))
                                 }
                                 if (!fs.existsSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads', 'Emojis'))) {
                                   // Create 'Channels' directory in 'Downloads' directory.
-                                  if (settings.debug) logging.ui.log.write(logging.chalk`{gray Debug:} {gray.bold Creating Emojis directory in Downloads directory, for ${i}.}`)
+                                  if (settings.debug) logging.ui.log.write(`${gray('Debug:')} ${gray(bold(`Creating Emojis directory in Downloads directory, for ${i}.`))}`)
                                   fs.mkdirSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads', 'Emojis'))
                                 }
 
-                                fetch.get(r.emoji.url).pipe(fs.createWriteStream(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads', 'Emojis', `${String(object[i].e.findIndex(i => i.d === r.emoji.identifier))}.${type}`))).on('finish', () => {
+                                const dest = fs.createWriteStream(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads', 'Emojis', `${String(object[i].e.findIndex(i => i.d === r.emoji.identifier))}.${type}`))
+                                res.body.pipe(dest)
+                                dest.on('close', () => {
                                   // Finally resolve.
-                                  logging.ui.log.write(logging.chalk`{green Log:} {green.bold Completed download for emoji ${object[i].e.findIndex(i => i.d === r.emoji.identifier)}, for ${i}.}`)
+                                  logging.ui.log.write(`${green('Log:')} ${green(bold(`Completed download for emoji ${object[i].e.findIndex(i => i.d === r.emoji.identifier)}, for ${i}.`))}`)
                                   resolve()
                                 })
                               } else resolve() // Whatever, couldn't get it.
                             }).catch(e => {
                               if (settings.debug) console.error(e)
-                              logging.ui.log.write(logging.chalk`{red Error:} {red.bold (${e.message}) Failed to download emoji ${object[i].e.findIndex(i => i.d === r.emoji.identifier)}, for ${i}.}`)
+                              logging.ui.log.write(`${red('Error:')} ${red(bold(`(${e.message}) Failed to download emoji ${object[i].e.findIndex(i => i.d === r.emoji.identifier)}, for ${i}.`))}`)
                               resolve() // We failed, tell user.
                             })
                           }))
                         }
                       }
-                      reactions.push({c: reaction.count, u: reaction.users.size > 0 ? reaction.users.map(i => i.id) : undefined, d: object[id].e.findIndex(i => i.d === reaction.emoji.identifier)})
+                      reactions.push({ c: reaction.count, u: reaction.users.size > 0 ? reaction.users.map(i => i.id) : undefined, d: object[id].e.findIndex(i => i.d === reaction.emoji.identifier) })
                     })
                   }
                   let firstUserMention
-                  if (object[id].u.findIndex(i => i.i === msg.author.id) === -1) {
+                  if ((object[id].u.findIndex(i => i.i === msg.author.id) === -1) || object[id].u.find(i => i.i === msg.author.id).retry) {
                     let roles
                     if (channelOptions.members.roles && msg.member) {
                       roles = []
@@ -646,35 +661,39 @@ async function loadInstances (client, settings, logging, date) {
                       j: channelOptions.members.joinDate ? (msg.member ? msg.member.joinedTimestamp : undefined) : undefined,
                       r: roles
                     }
-                    object[id].u.push(firstUserMention)
+                    if (object[id].u.find(i => i.i === msg.author.id) ? object[id].u.find(i => i.i === msg.author.id).retry : false) {
+                      object[id].u[object[id].u.findIndex(i => i.i === msg.author.id)] = firstUserMention
+                    } else object[id].u.push(firstUserMention)
 
-                    if (channelOptions.downloads.icons && channelOptions.members.icon && msg.author.avatarURL) {
+                    if (channelOptions.downloads.icons && channelOptions.members.icon && (msg.author.avatarURL || msg.author.displayAvatarURL)) {
                       promises.push(new Promise((resolve, reject) => {
                         let m = msg.author
                         let i = id
-                        fetch.get(m.avatarURL).then(res => {
+                        fetch(m.avatarURL || msg.author.displayAvatarURL).then(res => {
                           if (res.ok) {
-                            let type = res.headers['content-type'].split('/')[1].toLowerCase()
+                            let type = res.headers.get('content-type').split('/')[1].toLowerCase()
                             if (!fs.existsSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads'))) {
                               // Create 'Downloads' directory.
-                              if (settings.debug) logging.ui.log.write(logging.chalk`{gray Debug:} {gray.bold Creating Downloads directory, for ${i}.}`)
+                              if (settings.debug) logging.ui.log.write(`${gray('Debug:')} ${gray(bold(`Creating Downloads directory, for ${i}.`))}`)
                               fs.mkdirSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads'))
                             }
                             if (!fs.existsSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads', 'Users'))) {
                               // Create 'Channels' directory in 'Downloads' directory.
-                              if (settings.debug) logging.ui.log.write(logging.chalk`{gray Debug:} {gray.bold Creating Users directory in Downloads directory, for ${i}.}`)
+                              if (settings.debug) logging.ui.log.write(`${gray('Debug:')} ${gray(bold(`Creating Users directory in Downloads directory, for ${i}.`))}`)
                               fs.mkdirSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads', 'Users'))
                             }
 
-                            fetch.get(m.avatarURL).pipe(fs.createWriteStream(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads', 'Users', `${String(object[i].u.findIndex(i => i.i === m.id))}.${type}`))).on('finish', () => {
+                            const dest = fs.createWriteStream(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads', 'Users', `${String(object[i].u.findIndex(i => i.i === m.id))}.${type}`))
+                            res.body.pipe(dest)
+                            dest.on('close', () => {
                               // Finally resolve.
-                              logging.ui.log.write(logging.chalk`{green Log:} {green.bold Completed download for user icon ${object[i].u.findIndex(i => i.i === m.id)}, for ${i}.}`)
+                              logging.ui.log.write(`${green('Log:')} ${green(bold(`Completed download for user icon ${object[i].u.findIndex(i => i.i === m.id)}, for ${i}.`))}`)
                               resolve()
                             })
                           } else resolve() // Whatever, couldn't get it.
                         }).catch(e => {
                           if (settings.debug) console.error(e)
-                          logging.ui.log.write(logging.chalk`{red Error:} {red.bold (${e.message}) Failed to download user icon ${object[i].u.findIndex(i => i.i === m.id)}, for ${i}.}`)
+                          logging.ui.log.write(`${red('Error:')} ${red(bold(`(${e.message}) Failed to download user icon ${object[i].u.findIndex(i => i.i === m.id)}, for ${i}.`))}`)
                           resolve() // We failed, tell user.
                         })
                       }))
@@ -689,14 +708,132 @@ async function loadInstances (client, settings, logging, date) {
                       })
                     }
                   */
-                  // Edit message content to replace user id's.
+
+                  // Edit message content to replace user ids.
                   if (msg.content.match(/<@!?[0-9]+>/g)) {
                     msg.content.match(/<@!?[0-9]+>/g).forEach(i => {
-                      msg.content = msg.content.replace(i, `<@${object[id].u.findIndex(c => c.i === i.replace(/[^0-9]/g, ''))}>`)
+                      let mID = i.replace(/[^0-9]/g, '')
+                      // client.users.get(i.replace(/[^0-9]/g, '')) // TODO
+                      let user = object[id].u.findIndex(c => c.i === mID) > -1 ? object[id].u.findIndex(c => c.i === mID) : undefined
+                      if (typeof user !== 'number') {
+                        firstUserMention = {
+                          i: mID,
+                          retry: true
+                        }
+                        object[id].u.push(firstUserMention)
+
+                        let theUser = msg.mentions.users.get(mID)
+                        if (theUser) {
+                          object[id].u[object[id].u.findIndex(c => c.i === mID)] = {
+                            n: channelOptions.members.name ? theUser.username : undefined,
+                            i: theUser.id, // Before appending to file, check options.
+                            tg: channelOptions.members.name ? theUser.username + '#' + theUser.discriminator : undefined,
+                            a: channelOptions.members.icon ? (theUser.displayAvatarURL || `https://cdn.discordapp.com/avatars/${theUser.id}/${theUser.avatar}.png`) : theUser.defaultAvatarURL,
+                            b: theUser.bot,
+                            t: channelOptions.members.creationDate ? theUser.createdTimestamp : undefined,
+                            j: channelOptions.members.joinDate ? (msg.member ? msg.member.joinedTimestamp : undefined) : undefined,
+                            retry: true
+                          }
+                          if (channelOptions.downloads.icons && channelOptions.members.icon && (theUser.avatarURL || theUser.avatar)) {
+                            promises.push(new Promise((resolve, reject) => {
+                              let m = theUser
+                              let i = id
+                              fetch(m.avatarURL || `https://cdn.discordapp.com/avatars/${theUser.id}/${theUser.avatar}.png`).then(res => {
+                                if (res.ok) {
+                                  let type = res.headers.get('content-type').split('/')[1].toLowerCase()
+                                  if (!fs.existsSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads'))) {
+                                    // Create 'Downloads' directory.
+                                    if (settings.debug) logging.ui.log.write(`${gray('Debug:')} ${gray(bold(`Creating Downloads directory, for ${i}.`))}`)
+                                    fs.mkdirSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads'))
+                                  }
+                                  if (!fs.existsSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads', 'Users'))) {
+                                    // Create 'Channels' directory in 'Downloads' directory.
+                                    if (settings.debug) logging.ui.log.write(`${gray('Debug:')} ${gray(bold(`Creating Users directory in Downloads directory, for ${i}.`))}`)
+                                    fs.mkdirSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads', 'Users'))
+                                  }
+
+                                  const dest = fs.createWriteStream(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads', 'Users', `${String(object[i].u.findIndex(i => i.i === m.id))}.${type}`))
+                                  res.body.pipe(dest)
+                                  dest.on('close', () => {
+                                    // Finally resolve.
+                                    logging.ui.log.write(`${green('Log:')} ${green(bold(`Completed download for user icon ${object[i].u.findIndex(i => i.i === m.id)}, for ${i}.`))}`)
+                                    resolve()
+                                  })
+                                } else resolve() // Whatever, couldn't get it.
+                              }).catch(e => {
+                                if (settings.debug) console.error(e)
+                                logging.ui.log.write(`${red('Error:')} ${red(bold(`(${e.message}) Failed to download user icon ${object[i].u.findIndex(i => i.i === m.id)}, for ${i}.`))}`)
+                                resolve() // We failed, tell user.
+                              })
+                            }))
+                          }
+                        }
+                      }
+                      msg.content = msg.content.replace(i, `<@${object[id].u.findIndex(c => c.i === mID)}>`)
                     })
-                  } else if (msg.content.match(/<#[0-9]+>/g)) {
+                  }
+                  // Edit message content to replace channel ids.
+                  if (msg.content.match(/<#[0-9]+>/g)) {
                     msg.content.match(/<#[0-9]+>/g).forEach(i => {
-                      msg.content = msg.content.replace(i, `<#${object[id].c[object[id].c.findIndex(c => c.i === i.replace(/[^0-9]/g, ''))].po}>`)
+                      let mID = i.replace(/[^0-9]/g, '')
+                      let channel = object[id].c.findIndex(c => c.i === mID) > -1 ? object[id].c.findIndex(c => c.i === mID) : undefined
+                      msg.content = msg.content.replace(i, `<#${channel || 'undefined-channel'}>`)
+                    })
+                  }
+                  // Edit message content to replace emojis.
+                  if (msg.content.match(/<a?:[\w]+:[0-9]+>/g)) {
+                    msg.content.match(/<a?:[\w]+:[0-9]+>/g).forEach(i => {
+                      // Check if animated.
+                      let mID = i.split(':')[2].replace(/[^0-9]/g, '')
+                      let emoji = object[id].e.findIndex(e => e.i === mID) > -1 ? object[id].e.findIndex(e => e.i === mID) : undefined
+                      if (typeof emoji !== 'number') {
+                        object[id].e.push({
+                          i: mID,
+                          d: i.replace('<:', '').replace('>', ''),
+                          n: i.match(/:[\w]+:/)[0].replace(/:/g, ''),
+                          e: i,
+                          c: true,
+                          a: i.startsWith('<a:') ? true : undefined,
+                          u: channelOptions.information.emojis ? `https://cdn.discordapp.com/emojis/${mID}.${i.startsWith('<a:') ? 'gif' : 'png'}` : undefined,
+                          retry: true
+                        })
+
+                        let theEmoji = object[id].e[object[id].e.findIndex(e => e.i === mID)]
+                        if (channelOptions.downloads.emojis && mID) {
+                          promises.push(new Promise((resolve, reject) => {
+                            let r = theEmoji
+                            let i = id
+                            fetch(r.u).then(res => {
+                              if (res.ok) {
+                                let type = res.headers.get('content-type').split('/')[1].toLowerCase()
+                                if (!fs.existsSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads'))) {
+                                  // Create 'Downloads' directory.
+                                  if (settings.debug) logging.ui.log.write(`${gray('Debug:')} ${gray(bold(`Creating Downloads directory, for ${i}.`))}`)
+                                  fs.mkdirSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads'))
+                                }
+                                if (!fs.existsSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads', 'Emojis'))) {
+                                  // Create 'Channels' directory in 'Downloads' directory.
+                                  if (settings.debug) logging.ui.log.write(`${gray('Debug:')} ${gray(bold(`Creating Emojis directory in Downloads directory, for ${i}.`))}`)
+                                  fs.mkdirSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads', 'Emojis'))
+                                }
+
+                                const dest = fs.createWriteStream(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads', 'Emojis', `${String(object[i].e.findIndex(e => e.i === mID))}.${type}`))
+                                res.body.pipe(dest)
+                                dest.on('close', () => {
+                                  // Finally resolve.
+                                  logging.ui.log.write(`${green('Log:')} ${green(bold(`Completed download for emoji ${object[i].e.findIndex(e => e.i === mID)}, for ${i}.`))}`)
+                                  resolve()
+                                })
+                              } else resolve() // Whatever, couldn't get it.
+                            }).catch(e => {
+                              if (settings.debug) console.error(e)
+                              logging.ui.log.write(`${red('Error:')} ${red(bold(`(${e.message}) Failed to download emoji ${object[i].e.findIndex(e => e.i === mID)}, for ${i}.`))}`)
+                              resolve() // We failed, tell user.
+                            })
+                          }))
+                        }
+                      }
+                      msg.content = msg.content.replace(i, `<:${emoji}:>`)
                     })
                   }
 
@@ -722,14 +859,15 @@ async function loadInstances (client, settings, logging, date) {
                   if (channelCache[id][channel.id].lastMsgId ? (Number(msg.id) > Number(channelCache[id][channel.id].lastMsgId)) : true) channelCache[id][channel.id].lastMsgId = msg.id
                 }
               })
-              if (promises.length > 0) logging.ui.updateBottomBar(logging.chalk`{green.bold Still downloading files...}`)
+              if (promises.length > 0) logging.ui.updateBottomBar(`${green(bold(`Still downloading files...`))}`)
               Promise.all(promises).then(res => {
                 // Check how many messages we've collected so far.
+                if (!object[id].count) object[id].count = { messages: 0, downloads: 0 }
+
                 if (channelCache[id][channel.id].count >= channelCache[id][channel.id].nextCount) {
                   channelCache[id][channel.id].nextCount += channelCache[id][channel.id].everyMessages
                   channelCache[id][channel.id].atSplit++
 
-                  if (!object[id].count) object[id].count = { messages: 0, downloads: 0 }
                   object[id].count.messages += messages.m.length
                   object[id].count.downloads += promises.length
                   messages.po = channel.calculatedPosition || 0
@@ -741,23 +879,25 @@ async function loadInstances (client, settings, logging, date) {
                     if (err) throw err
                     messages = { m: [] } // RESET
 
-                    logging.ui.log.write(logging.chalk`{green Log:} {green.bold Dumping collected data for ${channel.id} in file, currently at split ${channelCache[id][channel.id].atSplit}.}`)
+                    logging.ui.log.write(`${green('Log:')} ${green(bold(`Dumping collected data for ${channel.id} in file, currently at split ${channelCache[id][channel.id].atSplit}.`))}`)
                     fetchMessages(channel, after ? null : msgLast.id, after ? msgFirst.id : null)
                   })
                 } else {
                   promises = [] // Clear
-                  logging.ui.updateBottomBar(logging.chalk`{green.bold Reading messages in ${channel.id}, currently at} {underline ${channelCache[id][channel.id].count}} {green.bold read messages...}`)
+                  logging.ui.updateBottomBar(`${green(bold(`Reading messages in ${channel.id}, currently at`))} ${underline(channelCache[id][channel.id].count)} ${green(bold(`read messages...`))}`)
                   fetchMessages(channel, after ? null : msgLast.id, after ? msgFirst.id : null)
                 }
               })
             } else {
-              if (promises.length > 0) logging.ui.updateBottomBar(logging.chalk`{green.bold Still downloading files...}`)
+              if (promises.length > 0) logging.ui.updateBottomBar(`${green(bold(`Still downloading files...`))}`)
               Promise.all(promises).then(res => {
                 // We finished reading in this channel.
-                logging.ui.log.write(logging.chalk`{green Log:} {green.bold Finished archiving ${channel.id}.}`)
+                logging.ui.log.write(`${green('Log:')} ${green(bold(`Finished archiving ${channel.id}.`))}`)
+
+                if (!object[id].count) object[id].count = { messages: 0, downloads: 0 }
+
                 // No messages
                 if ((deletedMessages[channel.id] && deletedMessages[channel.id].length > 0) || messages.m.length > 0) {
-                  if (!object[id].count) object[id].count = { messages: 0, downloads: 0 }
                   object[id].count.messages += messages.m.length
                   object[id].count.downloads += promises.length
                   messages.po = channel.calculatedPosition || 0
@@ -773,29 +913,30 @@ async function loadInstances (client, settings, logging, date) {
                   if (messages.m.length === 0) delete messages.m
 
                   channelCache[id][channel.id].atSplit++
-                  // Create file.
 
                   promises = [] // Clear
 
+                  // Create file.
                   fs.writeFile(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[id].type + id, `[CHANNEL]${channel.name || channel.recipient.username}(${channel.id})_${channelCache[id][channel.id].atSplit}.json`), JSON.stringify(messages, null, channelOptions.output.formatted ? channelOptions.output.whiteSpace : 0), (err) => {
                     if (err) throw err
                     messages = { m: [] } // RESET
+                    // Update cache
+                    object[id].ca = channelCache[id]
                     if (index < channels.length - 1) {
-                      index++
-                      // Update cache
-                      object[id].ca = channelCache[id]
-                      logging.ui.updateBottomBar(logging.chalk`{green.bold Initializing next channel...}`)
+                      index += 1
+
+                      logging.ui.updateBottomBar(`${green(bold(`Initializing next channel...`))}`)
                       readChannel(channels[index]).then(resolve, reject)
                     } else resolve()
                   })
                 } else {
+                  // Update cache
+                  object[id].ca = channelCache[id]
                   if (index < channels.length - 1) {
                     promises = [] // Clear
-                    index++
-                    // Update cache
-                    object[id].ca = channelCache[id]
+                    index += 1
 
-                    logging.ui.updateBottomBar(logging.chalk`{green.bold Initializing next channel...}`)
+                    logging.ui.updateBottomBar(`${green(bold(`Initializing next channel...`))}`)
                     readChannel(channels[index]).then(resolve, reject)
                   } else resolve() // If we reached here, that means we've temporarily archived every server.
                 }
@@ -813,17 +954,17 @@ async function loadInstances (client, settings, logging, date) {
     readChannel(channels[index]).then(r => {
       Object.entries(object).forEach((i, index) => {
         let c = i[1]
-        if (c.count > 0) {
+        if (c.count && c.count.messages > 0) {
           let tempDir = path.join(settings.archiving.tempDir, 'DARAH_TEMP', c.type + i[0])
 
           // Dump object[string].ca into archive directory.
           fs.writeFileSync(path.join(c.directory, 'cache.json'), JSON.stringify(c.ca, null, c.o.output.formatted ? c.o.output.whiteSpace : 0))
-          if (settings.debug) logging.ui.log.write(logging.chalk`{gray Debug:} {gray.bold Updating cache file for ${i[0]}.}`)
+          if (settings.debug) logging.ui.log.write(`${gray('Debug:')} ${gray(bold(`Updating cache file for ${i[0]}.`))}`)
 
           if (!settings.archiving.overrule) {
             // Recreate settings file in archive directory.
-            fs.writeFileSync(path.join(c.directory, 'settings.json'), JSON.stringify(c.o, null, null, c.o.output.formatted ? c.o.output.whiteSpace : 1))
-            if (settings.debug) logging.ui.log.write(logging.chalk`{gray Debug:} {gray.bold Recreating settings file for ${i[0]}.}`)
+            fs.writeFileSync(path.join(c.directory, 'settings.json'), JSON.stringify(c.o, null, c.o.output.formatted ? c.o.output.whiteSpace : 1))
+            if (settings.debug) logging.ui.log.write(`${gray('Debug:')} ${gray(bold(`Recreating settings file for ${i[0]}.`))}`)
           }
 
           // Dump object[string].c into file.
@@ -833,15 +974,19 @@ async function loadInstances (client, settings, logging, date) {
             }
           }
           fs.writeFileSync(path.join(tempDir, '[INFO]channels.json'), JSON.stringify(c.c, null, c.o.output.formatted ? c.o.output.whiteSpace : 0))
-          if (settings.debug) logging.ui.log.write(logging.chalk`{gray Debug:} {gray.bold Appending channels file for ${i[0]}.}`)
+          if (settings.debug) logging.ui.log.write(`${gray('Debug:')} ${gray(bold(`Appending channels file for ${i[0]}.`))}`)
 
           // Dump object[string].r into file.
           fs.writeFileSync(path.join(tempDir, '[INFO]roles.json'), JSON.stringify(c.r, null, c.o.output.formatted ? c.o.output.whiteSpace : 0))
-          if (settings.debug) logging.ui.log.write(logging.chalk`{gray Debug:} {gray.bold Appending roles file for ${i[0]}.}`)
+          if (settings.debug) logging.ui.log.write(`${gray('Debug:')} ${gray(bold(`Appending roles file for ${i[0]}.`))}`)
+
+          for (let i = 0; i < c.e.length; i++) {
+            if (c.e[i].retry) c.e[i].retry = undefined
+          }
 
           // Dump object[string].e into file.
           fs.writeFileSync(path.join(tempDir, '[INFO]emojis.json'), JSON.stringify(c.e, null, c.o.output.formatted ? c.o.output.whiteSpace : 0))
-          if (settings.debug) logging.ui.log.write(logging.chalk`{gray Debug:} {gray.bold Appending emojis file for ${i[0]}.}`)
+          if (settings.debug) logging.ui.log.write(`${gray('Debug:')} ${gray(bold(`Appending emojis file for ${i[0]}.`))}`)
 
           // Dump object[string].g into file.
           if (!c.o.information.owner) {
@@ -852,21 +997,24 @@ async function loadInstances (client, settings, logging, date) {
           /* KararTY's note: It is on the person taking the archive to prove that their archive doesn't contain any modified/edited information.
           This/These script(s), and its coder(s), is/are not responsible for any erroneous and/or modified/edited information in any of the archives. */
           fs.writeFileSync(path.join(tempDir, `[INFORMATION]${c.o.information.name ? c.g.n : '?'}(${c.o.information.id ? c.g.i : '?'}).json`), JSON.stringify(c.g, null, c.o.output.formatted ? c.o.output.whiteSpace : 0))
-          if (settings.debug) logging.ui.log.write(logging.chalk`{gray Debug:} {gray.bold Appending info file for ${i[0]}.}`)
+          if (settings.debug) logging.ui.log.write(`${gray('Debug:')} ${gray(bold(`Appending info file for ${i[0]}.`))}`)
 
-          // Dump object[string].u into file.
+          for (let i = 0; i < c.u.length; i++) {
+            if (c.u[i].retry) c.u[i].retry = undefined
+          }
           if (!c.o.members.id) { // Get rid of ID.
             for (let i = 0; i < c.u.length; i++) {
               c.u[i].i = undefined
             }
           }
+          // Dump object[string].u into file.
           fs.writeFileSync(path.join(tempDir, '[INFO]users.json'), JSON.stringify(c.u, null, c.o.output.formatted ? c.o.output.whiteSpace : 0))
-          if (settings.debug) logging.ui.log.write(logging.chalk`{gray Debug:} {gray.bold Appending users file for ${i[0]}.}`)
+          if (settings.debug) logging.ui.log.write(`${gray('Debug:')} ${gray(bold(`Appending users file for ${i[0]}.`))}`)
 
-          logging.ui.log.write(logging.chalk`{green Log:} {green.bold Archived ${c.count.messages} messages & downloaded ${c.count.downloads} files, for ${i[0]}.}`)
-        } else logging.ui.log.write(logging.chalk`{green Log:} {green.bold No (new) messages for ${i[0]}.}`)
+          logging.ui.log.write(`${green('Log:')} ${green(bold(`Archived ${c.count.messages} messages & downloaded ${c.count.downloads} files, for ${i[0]}.`))}`)
+        } else logging.ui.log.write(`${green('Log:')} ${green(bold(`No (new) messages for ${i[0]}.`))}`)
       })
-      logging.ui.updateBottomBar(logging.chalk`{green.bold Initializing compression...}`)
+      logging.ui.updateBottomBar(`${green(bold(`Initializing compression...`))}`)
       compression(object, settings, logging, date).then(resolve, reject)
     })
   })

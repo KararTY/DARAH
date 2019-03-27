@@ -93,7 +93,8 @@ const client = new Client()
 let loginFailed
 
 const inquirer = require('inquirer')
-const chalk = require('chalk')
+const { red, green, gray, bold, underline, redBright, blue } = require('colorette')
+
 const ui = new inquirer.ui.BottomBar()
 
 const cronParser = require('cron-parser')
@@ -104,34 +105,34 @@ let loginQuestion = {
   type: 'password',
   name: 'discordToken',
   mask: '*',
-  message: 'Please enter your Discord Authentication token:',
+  message: 'Please enter your Discord Authentication token:\n',
   validate: function (val) {
     val = val.trim().replace(/[ ]+/g, '')
     if (val.length === 0) {
-      ui.log.write(chalk`{red Error:} {red.bold Given token length is ${val.length}, must be longer.}`)
+      ui.log.write(`${red('Error:')} ${red(bold(`Given token length is ${val.length}, must be longer.`))}`)
       return 'Invalid token length. Try again.'
     }
     ui.updateBottomBar('Please wait...')
     let done = this.async()
 
     client.once('ready', () => {
-      ui.log.write(chalk`{green Log:} {green.bold Successfully authorized on Discord.}`)
-      if (!loginFailed) ui.log.write(chalk`{green Log:} {green.bold Make it easier for yourself, enter Discord Authorization token in the 'settings.js' file next time!}`)
-      else ui.log.write(chalk`{redBright Warning:} {redBright.bold Please correctly enter your Discord Authorization token in the 'settings.js' file next time!}`)
+      ui.log.write(`${green('Log:')} ${green(bold('Successfully authorized on Discord.'))}`)
+      if (!loginFailed) ui.log.write(`${green('Log:')} ${green(bold(`Make it easier for yourself, enter Discord Authorization token in the 'settings.js' file next time!`))}`)
+      else ui.log.write(`${redBright('Warning:')} ${redBright(bold(`Please correctly enter your Discord Authorization token in the 'settings.js' file next time!`))}`)
       done(null, true)
     }).login(val).catch(e => {
       if (settings.debug) console.error(e)
-      ui.log.write(chalk`{red Error:} {red.bold ${e.message}}`)
+      ui.log.write(`${red('Error:')} ${red(bold(e.message))}`)
       client.removeAllListeners('ready')
       done('Could not use that token, try again.')
     })
   }
 }
 let questions = [
-  (settings.archiving.archiveDir.length === 0 || !fs.existsSync(path.join(settings.archiving.tempDir)) || !fs.existsSync(path.join(settings.archiving.tempDir, 'DARAH_ARCHIVES')) || fs.accessSync(path.join(settings.archiving.archiveDir), fs.constants.R_OK | fs.constants.W_OK) !== undefined) ? {
+  (settings.archiving.archiveDir.length === 0 || !fs.existsSync(path.join(settings.archiving.archiveDir)) || fs.accessSync(path.join(settings.archiving.archiveDir), fs.constants.R_OK | fs.constants.W_OK) !== undefined) ? {
     type: 'input',
     name: 'archiveDir',
-    message: `Please enter archive directory or leave empty to use default ${chalk`{gray.underline (${__dirname})}:`}`,
+    message: `Please enter archive directory or leave empty to use default ${gray(underline(__dirname))}:\n`,
     validate: function (val) {
       val = val.trim().replace(/[~]/g, os.homedir())
       if (val.length === 0) val = __dirname
@@ -142,15 +143,15 @@ let questions = [
         return true
       } catch (e) {
         if (settings.debug) console.error(e)
-        ui.log.write(chalk`{red Error:} {red.bold ${e.message}}`)
+        ui.log.write(`${red('Error:')} ${red(bold(e.message))}`)
         return 'Error. Try again.'
       }
     }
   } : false,
-  (settings.archiving.tempDir.length === 0 || !fs.existsSync(path.join(settings.archiving.tempDir)) || !fs.existsSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP')) || fs.accessSync(path.join(settings.archiving.tempDir), fs.constants.R_OK | fs.constants.W_OK) !== undefined) ? {
+  (settings.archiving.archiveDir.length === 0 || !fs.existsSync(path.join(settings.archiving.tempDir)) || fs.accessSync(path.join(settings.archiving.tempDir), fs.constants.R_OK | fs.constants.W_OK) !== undefined) ? {
     type: 'input',
     name: 'tempDir',
-    message: `Please enter cache directory or leave empty to use default ${chalk`{gray.underline (${__dirname})}:`}`,
+    message: `Please enter cache directory or leave empty to use default ${gray(underline(__dirname))}:\n`,
     validate: function (val) {
       val = val.trim().replace(/[~]/g, os.homedir())
       if (val.length === 0) val = __dirname
@@ -161,7 +162,7 @@ let questions = [
         return true
       } catch (e) {
         if (settings.debug) console.error(e)
-        ui.log.write(chalk`{red Error:} {red.bold ${e.message}}`)
+        ui.log.write(`${red('Error:')} ${red(bold(e.message))}`)
         return 'Error. Try again.'
       }
     }
@@ -171,14 +172,14 @@ let questions = [
 if (settings.archiving.auto.enabled) {
   try {
     let testingDate = cronParser.parseExpression(settings.archiving.auto.cronSchedule)
-    ui.log.write(chalk`{green Log:} {green.bold Auto archiving enabled && CRON schedule string succesfully validated.} {gray Archives at\n${testingDate.next().toString()},\n${testingDate.next().toString()},\n${testingDate.next().toString()}\n... etc.}`)
+    ui.log.write(`${green('Log:')} ${green(bold('Auto archiving enabled && CRON schedule string succesfully validated.'))} ${gray(`Archives at\n${testingDate.next().toString()},\n${testingDate.next().toString()},\n${testingDate.next().toString()}\n... etc.`)}`)
   } catch (e) {
     if (settings.debug) console.error(e)
-    ui.log.write(chalk`{red Error:} {red.bold (Auto archiving enabled && CRON schedule string failed validation) ${e.message}}`)
+    ui.log.write(`${red('Error:')} ${red(bold(`Auto archiving enabled && CRON schedule string failed validation) ${e.message}`))}`)
     questions.push({
       type: 'input',
       name: 'cronSchedule',
-      message: `Please enter new cron job schedule string or leave empty to use default ${chalk`{gray.underline (0 0 */1 * *)}`}:`,
+      message: `Please enter new cron job schedule string or leave empty to use default ${gray(underline('0 0 */1 * *'))}:\n`,
       validate: function (val) {
         val = val.trim()
         if (val.length === 0) return true
@@ -187,7 +188,7 @@ if (settings.archiving.auto.enabled) {
           return true
         } catch (e) {
           if (settings.debug) console.error(e)
-          ui.log.write(chalk`{red Error:} {red.bold ${e.message}}`)
+          ui.log.write(`${red('Error:')} ${red(bold(e.message))}`)
           return 'Error. Try again.'
         }
       }
@@ -197,11 +198,11 @@ if (settings.archiving.auto.enabled) {
 inquirer.prompt({
   type: 'list',
   name: 'acceptTOS',
-  message: chalk`Have you read and accepted Discord's Developer Terms of Service?\n{blue.underline https://discordapp.com/developers/docs/legal}\nDo you understand that you have to take all\nresponsibility for any and all consequences as a\nresult of running this script?`,
+  message: `Have you read and accepted Discord's Developer Terms of Service?\n${blue(underline('https://discordapp.com/developers/docs/legal'))}\nDo you understand that you have to take all\nresponsibility for any and all consequences as a\nresult of running this script?\n`,
   choices: ['Yes', 'No']
 }).then(answer => {
   if (answer['acceptTOS'] === 'No') {
-    ui.log.write(chalk`{redBright Warning:} {redBright.bold ToS not accepted, please uninstall script.}`)
+    ui.log.write(`${redBright('Warning:')} ${redBright(bold('ToS not accepted, please delete script.'))}`)
     process.exit(0)
   }
 
@@ -209,11 +210,11 @@ inquirer.prompt({
   if (settings.authentication.discord.token) {
     prom.push(new Promise((resolve, reject) => {
       client.once('ready', () => {
-        ui.log.write(chalk`{green Log:} {green.bold Successfully authorized on Discord.}`)
+        ui.log.write(`${green('Log:')} ${green(bold('Successfully authorized on Discord.'))}`)
         resolve()
       }).login(settings.authentication.discord.token).catch(e => {
         if (settings.debug) console.error(e)
-        ui.log.write(chalk`{red Error:} {red.bold ${e.message}}`)
+        ui.log.write(`${red('Error:')} ${red(bold(e.message))}`)
         client.removeAllListeners('ready')
         loginFailed = true
         resolve(loginQuestion)
@@ -232,24 +233,35 @@ inquirer.prompt({
             directMessages: [],
             groups: []
           }
-          client.channels.filter(i => (i.type === 'dm' && i.permissionsFor(client.user.id).has('READ_MESSAGES') &&
-            i.permissionsFor(client.user.id).has('READ_MESSAGE_HISTORY')) || i.type === 'group' || i.type === 'text').map(i => {
+          client.channels.filter(i => {
+            switch (i.type) {
+              case 'dm':
+                return true
+              case 'group':
+                return true
+              case 'text':
+                let guild = client.guilds.get(i.guild.id)
+                return guild.channels.get(i.id).memberPermissions(guild.member(client.user.id)).has('READ_MESSAGE_HISTORY') && guild.channels.get(i.id).memberPermissions(guild.member(client.user.id)).has('READ_MESSAGES')
+              default:
+                return false
+            }
+          }).map(i => {
             if (i.type === 'dm') {
-              places.directMessages.push({name: `${i.recipient.username} (${i.recipient.id})`, value: `${i.type},${i.recipient.id}`})
+              places.directMessages.push({ name: `${i.recipient.username} (${i.recipient.id})`, value: `${i.type},${i.recipient.id}` })
             } else if (i.type === 'text') {
               if (guilds.indexOf(i.guild.id) === -1) {
-                places.guilds.push({name: `(${i.guild.nameAcronym}) ${i.guild.name} (${i.guild.id})`, value: `${i.type},${i.guild.id}`})
+                places.guilds.push({ name: `(${i.guild.nameAcronym}) ${i.guild.name} (${i.guild.id})`, value: `${i.type},${i.guild.id}` })
                 guilds.push(i.guild.id)
               }
             } else if (i.type === 'group') {
-              places.groups.push({name: `${i.name} (${i.id})`, value: `${i.type},${i.ownerID}`})
+              places.groups.push({ name: `${i.name} (${i.id})`, value: `${i.type},${i.ownerID}` })
             }
           })
           let chooseChannels = {
             type: 'checkbox',
             name: 'chosenChannels',
             choices: [],
-            message: 'Please choose what to archive (Multiple choices):',
+            message: 'Please choose what to archive (Multiple choices):\n',
             validate: function (vals) {
               if (vals.length < 1) {
                 return 'Choose at least one.'
@@ -259,21 +271,21 @@ inquirer.prompt({
           }
           if (places.guilds.length > 0) {
             chooseChannels.choices.push(new inquirer.Separator('= Guilds ='))
-            chooseChannels.choices.push({name: 'ALL', checked: true, value: 'text,ALL'})
+            chooseChannels.choices.push({ name: 'ALL', checked: true, value: 'text,ALL' })
             places.guilds.forEach(i => {
               chooseChannels.choices.push(i)
             })
           }
           if (places.groups.length > 0) {
             chooseChannels.choices.push(new inquirer.Separator('= Groups ='))
-            chooseChannels.choices.push({name: 'ALL', checked: true, value: 'group,ALL'})
+            chooseChannels.choices.push({ name: 'ALL', checked: true, value: 'group,ALL' })
             places.groups.forEach(i => {
               chooseChannels.choices.push(i)
             })
           }
           if (places.directMessages.length > 0) {
             chooseChannels.choices.push(new inquirer.Separator('= Direct messages ='))
-            chooseChannels.choices.push({name: 'ALL', checked: true, value: 'dm,ALL'})
+            chooseChannels.choices.push({ name: 'ALL', checked: true, value: 'dm,ALL' })
             places.directMessages.forEach(i => {
               chooseChannels.choices.push(i)
             })
@@ -312,13 +324,13 @@ inquirer.prompt({
               inquirer.prompt({
                 type: 'list',
                 name: 'saveSettings',
-                message: 'Do you want to save your choices to settings.js?',
+                message: 'Do you want to save your choices to settings.js?\n',
                 choices: ['Yes', 'No']
               }).then(answers => {
                 if (answers['saveSettings'] === 'Yes') {
-                  if (settings.debug) ui.log.write(chalk`{gray Debug:} {gray.bold Creating backup file of existing settings file.}`)
+                  if (settings.debug) ui.log.write(`${gray('Debug:')} ${gray(bold('Creating backup file of existing settings file.'))}`)
                   fs.writeFileSync(path.join(__dirname, 'settings.js.bkp'), JSON.stringify(require('./settings.js'), null, 2))
-                  if (settings.debug) ui.log.write(chalk`{gray Debug:} {gray.bold Writing new data to settings file.}`)
+                  if (settings.debug) ui.log.write(`${gray('Debug:')} ${gray(bold('Writing new data to settings file.'))}`)
                   fs.writeFileSync(path.join(__dirname, 'settings.js'), applyNewSettings())
                   // After that is complete, initialize auto or single-use.
                   start()
@@ -340,19 +352,19 @@ inquirer.prompt({
 
 function start () {
   let date = Date.now()
-  ui.updateBottomBar(chalk`{green.bold Next archive at} {green.bold.underline ${settings.archiving.auto.enabled ? cronParser.parseExpression(settings.archiving.auto.cronSchedule).next().toString() : new Date(date).toString()}}{green.bold .}`)
+  ui.updateBottomBar(`${green(bold('Next archive at'))} ${green(bold(underline(settings.archiving.auto.enabled ? cronParser.parseExpression(settings.archiving.auto.cronSchedule).next().toString() : new Date(date).toString())))}${green(bold('.'))}`)
   setTimeout(() => {
-    discord(client, settings, {ui, chalk}, date).then(res => {
+    discord(client, settings, { ui, colors: { red, blue, green, redBright, underline, bold, gray } }, date).then(res => {
       // All done
-      ui.log.write(chalk`{green.bold Done! It took ~${Number(((Date.now() - date) / 1000) / 60).toFixed(0)} minutes to finish.}`)
+      ui.log.write(`${green(bold(`Done! It took ~${Number(((Date.now() - date) / 1000) / 60).toFixed(0)} minutes to finish.`))}`)
 
       if (settings.archiving.auto.enabled) {
-        ui.updateBottomBar(chalk`{green.bold Next archive at} {green.bold.underline ${cronParser.parseExpression(settings.archiving.auto.cronSchedule).next().toString()}}{green.bold .}`)
+        ui.updateBottomBar(`${green(bold(`Next archive at`))} ${green(bold(underline(cronParser.parseExpression(settings.archiving.auto.cronSchedule).next().toString())))}${green(bold('.'))}`)
         setTimeout(() => {
           start()
         }, new Date(cronParser.parseExpression(settings.archiving.auto.cronSchedule).next()) - Date.now())
       } else {
-        ui.updateBottomBar(chalk`{green.bold Thank you for using DARAH.}`)
+        ui.updateBottomBar(`${green(bold(`Thank you for using DARAH.`))}`)
         process.exit(0)
       }
     })

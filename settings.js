@@ -22,31 +22,31 @@ module.exports = {
       fullArchive: true, // Archives everything from the beginning if enabled.
       everyMessages: 100000, // Create new file every X messages.
       channels: {
-        id: false,
+        id: true,
         name: true,
         topic: true,
         voice: true
       },
       messages: {
-        id: false,
+        id: true,
         attachments: true,
         embeds: true,
         reactions: true
       },
       members: {
-        name: false,
-        id: false,
+        name: true,
+        id: true,
         creationDate: true,
         joinDate: true,
         roles: true,
         icon: true
       },
       information: {
-        id: false,
-        name: false,
+        id: true,
+        name: true,
         icon: true,
         owner: true,
-        emojis: false,
+        emojis: true,
         roles: true,
         channels: true,
         users: true

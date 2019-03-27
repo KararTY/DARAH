@@ -6,7 +6,7 @@
 ### [Want to view your archives? Click here for S.A.R.A.H. Viewer!](https://github.com/kararty/sarah-viewer)
 
 ### Prerequisites
-  * NodeJS version >= 8.1.2
+  * NodeJS version >= 11.10.0
   * Enough disk space.
 
 ### Contributors
