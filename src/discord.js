@@ -875,7 +875,7 @@ async function loadInstances (client, settings, logging, date) {
                   promises = [] // Clear
 
                   // Create file.
-                  fs.writeFile(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[id].type + id, `[CHANNEL]${channel.name || channel.recipient.username}(${channel.id})_${channelCache[id][channel.id].atSplit}.json`), JSON.stringify(messages, null, channelOptions.output.formatted ? channelOptions.output.whiteSpace : 0), (err) => {
+                  fs.writeFile(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[id].type + id, `[CHANNEL]${channelOptions.channels.name ? (channel.name || channel.recipient.username) : channel.calculatedPosition}(${channel.calculatedPosition})_${channelCache[id][channel.id].atSplit}.json`), JSON.stringify(messages, null, channelOptions.output.formatted ? channelOptions.output.whiteSpace : 0), (err) => {
                     if (err) throw err
                     messages = { m: [] } // RESET
 
@@ -917,7 +917,7 @@ async function loadInstances (client, settings, logging, date) {
                   promises = [] // Clear
 
                   // Create file.
-                  fs.writeFile(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[id].type + id, `[CHANNEL]${channel.name || channel.recipient.username}(${channel.id})_${channelCache[id][channel.id].atSplit}.json`), JSON.stringify(messages, null, channelOptions.output.formatted ? channelOptions.output.whiteSpace : 0), (err) => {
+                  fs.writeFile(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[id].type + id, `[CHANNEL]${channelOptions.channels.name ? (channel.name || channel.recipient.username) : channel.calculatedPosition}(${channel.calculatedPosition})_${channelCache[id][channel.id].atSplit}.json`), JSON.stringify(messages, null, channelOptions.output.formatted ? channelOptions.output.whiteSpace : 0), (err) => {
                     if (err) throw err
                     messages = { m: [] } // RESET
                     // Update cache
