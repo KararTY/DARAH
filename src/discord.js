@@ -169,7 +169,7 @@ async function loadInstances (client, settings, logging, date) {
                   i: channelOptions.channels.id ? channel.id : undefined,
                   n: channel.name || channel.owner.username || channel.recipient.username || undefined,
                   ty: channel.type || undefined,
-                  po: channel.calculatedPosition || undefined,
+                  po: typeof channel.calculatedPosition === 'number' ? channel.calculatedPosition : undefined,
                   t: channel.createdTimestamp || undefined,
                   bit: channel.bitrate || undefined, // Voice channel bitrate.
                   lim: channel.limit === 0 ? undefined : channel.limit,
@@ -183,7 +183,7 @@ async function loadInstances (client, settings, logging, date) {
                 i: channel.id,
                 n: channelOptions.channels.name ? channel.name : undefined,
                 ty: channel.type || undefined,
-                po: channel.calculatedPosition || 0,
+                po: typeof channel.calculatedPosition === 'number' ? channel.calculatedPosition : undefined,
                 to: channelOptions.channels.topic ? (channel.topic || undefined) : undefined,
                 t: channel.createdTimestamp || undefined,
                 pa: channel.parent ? { n: channel.parent.name, i: channel.parent.id } : undefined
@@ -464,7 +464,7 @@ async function loadInstances (client, settings, logging, date) {
           i: channel.id,
           n: channelOptions.channels.name ? (channel.name || (channel.owner ? channel.owner.username : undefined) || channel.recipient.username || undefined) : undefined,
           ty: channel.type || undefined,
-          po: channel.calculatedPosition || 0,
+          po: typeof channel.calculatedPosition === 'number' ? channel.calculatedPosition : undefined,
           to: channelOptions.channels.topic ? (channel.topic || undefined) : undefined,
           t: channel.createdTimestamp || undefined,
           pa: channel.parent ? { n: channel.parent.name, i: channel.parent.id } : undefined,
