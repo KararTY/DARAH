@@ -80,23 +80,24 @@
     * `e[].m`: **string** Reaction if managed if applicable
     * `e[].u`: **string** Reaction url if applicable
 ### [INFO]channels.json
-  * `p`: **Array{}** Parent channels
-    * `p[].i`: **string** Parent id
-    * `p[].n`: **string** Parent name
-  * `c`: **Array{}** Channels
-    * `c[].i`: **string** Channel id
-    * `c[].n`: **string** Channel name
-    * `c[].to`: **string** Channel topic
-    * `c[].n`: **string** Channel name
-    * `c[].bit`: **string** Voice channel bitrate if applicable
-    * `c[].lim`: **string** Voice channel user limit if applicable
-    * `c[].ty`: **string** Channel type
-    * `c[].po`: **number** Channel position
-    * `c[].t`: **Date** Channel creation timestamp
-    * `c[].pa`: **number** Channel parent channel index if exists
-    * `c[].p`: **Array{}** Channel permission overwrites if exists
-      * `c[].p[].i`: **string** Channel permission overwrite id
-      * `c[].p[].ty`: **string** Channel permission overwrite type
+  * `c`: **Object** Channels
+    * `c.p`: **Array{}** Parent channels
+      * `c.p[].i`: **string** Parent id
+      * `c.p[].n`: **string** Parent name
+    * `c.c`: **Array{}** Channels
+      * `c.c[].i`: **string** Channel id
+      * `c.c[].n`: **string** Channel name
+      * `c.c[].to`: **string** Channel topic
+      * `c.c[].n`: **string** Channel name
+      * `c.c[].bit`: **string** Voice channel bitrate if applicable
+      * `c.c[].lim`: **string** Voice channel user limit if applicable
+      * `c.c[].ty`: **string** Channel type
+      * `c.c[].po`: **number** Channel position
+      * `c.c[].t`: **Date** Channel creation timestamp
+      * `c.c[].pa`: **number** Channel parent channel index if exists
+      * `c.c[].p`: **Array{}** Channel permission overwrites if exists
+        * `c.c[].p[].i`: **string** Channel permission overwrite id
+        * `c.c[].p[].ty`: **string** Channel permission overwrite type
 ### [CHANNEL]channel-name(channel id).json
   * `m`: **Array{}** Messages
     * `m[].i`: **string** Message id

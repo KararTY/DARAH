@@ -146,6 +146,7 @@ async function loadInstances (client, settings, logging, date) {
             object[id] = {
               ca: {},
               c: [],
+              p: [],
               r: [],
               g: {},
               e: [],
@@ -168,8 +169,8 @@ async function loadInstances (client, settings, logging, date) {
                 let parentChannelObject
                 if (channel.parent) {
                   parentChannelObject = {
-                    i: channel.parent.name,
-                    n: channel.parent.id
+                    i: channel.parent.id,
+                    n: channel.parent.name
                   }
                   if (object[id].p.findIndex(i => i.i === parentChannelObject.i) > -1) object[id].p[object[id].p.findIndex(i => i.i === parentChannelObject.i)] = parentChannelObject
                   else object[id].p.push(parentChannelObject)
@@ -191,8 +192,8 @@ async function loadInstances (client, settings, logging, date) {
               let parentChannelObject
               if (channel.parent) {
                 parentChannelObject = {
-                  i: channel.parent.name,
-                  n: channel.parent.id
+                  i: channel.parent.id,
+                  n: channel.parent.name
                 }
                 if (object[id].p.findIndex(i => i.i === parentChannelObject.i) > -1) object[id].p[object[id].p.findIndex(i => i.i === parentChannelObject.i)] = parentChannelObject
                 else object[id].p.push(parentChannelObject)
@@ -481,8 +482,8 @@ async function loadInstances (client, settings, logging, date) {
         let parentChannelObject
         if (channel.parent) {
           parentChannelObject = {
-            i: channel.parent.name,
-            n: channel.parent.id
+            i: channel.parent.id,
+            n: channel.parent.name
           }
           if (object[id].p.findIndex(i => i.i === parentChannelObject.i) > -1) object[id].p[object[id].p.findIndex(i => i.i === parentChannelObject.i)] = parentChannelObject
           else object[id].p.push(parentChannelObject)
@@ -1003,7 +1004,7 @@ async function loadInstances (client, settings, logging, date) {
               c.p[i].i = undefined
             }
           }
-          fs.writeFileSync(path.join(tempDir, '[INFO]channels.json'), JSON.stringify(c.c, null, c.o.output.formatted ? c.o.output.whiteSpace : 0))
+          fs.writeFileSync(path.join(tempDir, '[INFO]channels.json'), JSON.stringify({ c: c.c, p: c.p }, null, c.o.output.formatted ? c.o.output.whiteSpace : 0))
           if (settings.debug) logging.ui.log.write(`${gray('Debug:')} ${gray(bold(`Appending channels file for ${i[0]}.`))}`)
 
           // Dump object[string].r into file.
