@@ -62,7 +62,7 @@
     * `u[].b`: **boolean** Member discord account if bot
     * `u[].t`: **Date** Member discord account creation
     * `u[].r`: **Array** Member guild roles
-      * `u[].r[]`: **string** Member guild role id
+      * `u[].r[]`: **number** Member guild role index
 ### [INFO]roles.json
   * `r`: **Array{}** Roles
     * `r[].i`: **string** Role id
@@ -80,6 +80,9 @@
     * `e[].m`: **string** Reaction if managed if applicable
     * `e[].u`: **string** Reaction url if applicable
 ### [INFO]channels.json
+  * `p`: **Array{}** Parent channels
+    * `p[].i`: **string** Parent id
+    * `p[].n`: **string** Parent name
   * `c`: **Array{}** Channels
     * `c[].i`: **string** Channel id
     * `c[].n`: **string** Channel name
@@ -90,9 +93,7 @@
     * `c[].ty`: **string** Channel type
     * `c[].po`: **number** Channel position
     * `c[].t`: **Date** Channel creation timestamp
-    * `c[].pa`: **Object** Channel if channel has parent
-      * `c[].pa.n`: **string** Channel parent name
-      * `c[].pa.i`: **string** Channel parent id
+    * `c[].pa`: **number** Channel parent channel index if exists
     * `c[].p`: **Array{}** Channel permission overwrites if exists
       * `c[].p[].i`: **string** Channel permission overwrite id
       * `c[].p[].ty`: **string** Channel permission overwrite type

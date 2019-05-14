@@ -165,6 +165,15 @@ async function loadInstances (client, settings, logging, date) {
                     })
                   })
                 }
+                let parentChannelObject
+                if (channel.parent) {
+                  parentChannelObject = {
+                    i: channel.parent.name,
+                    n: channel.parent.id
+                  }
+                  if (object[id].p.findIndex(i => i.i === parentChannelObject.i) > -1) object[id].p[object[id].p.findIndex(i => i.i === parentChannelObject.i)] = parentChannelObject
+                  else object[id].p.push(parentChannelObject)
+                }
                 object[id].c.push({
                   i: channelOptions.channels.id ? channel.id : undefined,
                   n: channel.name || channel.owner.username || channel.recipient.username || undefined,
@@ -173,12 +182,21 @@ async function loadInstances (client, settings, logging, date) {
                   t: channel.createdTimestamp || undefined,
                   bit: channel.bitrate || undefined, // Voice channel bitrate.
                   lim: channel.limit === 0 ? undefined : channel.limit,
-                  pa: channel.parent ? { n: channel.parent.name, i: channel.parent.id } : undefined,
+                  pa: channel.parent ? object[id].p.findIndex(i => i.i === parentChannelObject.i) : undefined,
                   p: permissionOverwrites.length > 0 ? permissionOverwrites : undefined
                 })
               })
             }
             channel.guild.channels.filter(i => i.type === 'text').map(channel => {
+              let parentChannelObject
+              if (channel.parent) {
+                parentChannelObject = {
+                  i: channel.parent.name,
+                  n: channel.parent.id
+                }
+                if (object[id].p.findIndex(i => i.i === parentChannelObject.i) > -1) object[id].p[object[id].p.findIndex(i => i.i === parentChannelObject.i)] = parentChannelObject
+                else object[id].p.push(parentChannelObject)
+              }
               object[id].c.push({
                 i: channel.id,
                 n: channelOptions.channels.name ? channel.name : undefined,
@@ -186,7 +204,7 @@ async function loadInstances (client, settings, logging, date) {
                 po: typeof channel.calculatedPosition === 'number' ? channel.calculatedPosition : undefined,
                 to: channelOptions.channels.topic ? (channel.topic || undefined) : undefined,
                 t: channel.createdTimestamp || undefined,
-                pa: channel.parent ? { n: channel.parent.name, i: channel.parent.id } : undefined
+                pa: channel.parent ? object[id].p.findIndex(i => i.i === parentChannelObject.i) : undefined
               })
             })
 
@@ -460,6 +478,15 @@ async function loadInstances (client, settings, logging, date) {
             })
           })
         }
+        let parentChannelObject
+        if (channel.parent) {
+          parentChannelObject = {
+            i: channel.parent.name,
+            n: channel.parent.id
+          }
+          if (object[id].p.findIndex(i => i.i === parentChannelObject.i) > -1) object[id].p[object[id].p.findIndex(i => i.i === parentChannelObject.i)] = parentChannelObject
+          else object[id].p.push(parentChannelObject)
+        }
         let channelObject = {
           i: channel.id,
           n: channelOptions.channels.name ? (channel.name || (channel.owner ? channel.owner.username : undefined) || channel.recipient.username || undefined) : undefined,
@@ -467,7 +494,7 @@ async function loadInstances (client, settings, logging, date) {
           po: typeof channel.calculatedPosition === 'number' ? channel.calculatedPosition : undefined,
           to: channelOptions.channels.topic ? (channel.topic || undefined) : undefined,
           t: channel.createdTimestamp || undefined,
-          pa: channel.parent ? { n: channel.parent.name, i: channel.parent.id } : undefined,
+          pa: channel.parent ? object[id].p.findIndex(i => i.i === parentChannelObject.i) : undefined,
           p: permissionOverwrites.length > 0 ? permissionOverwrites : undefined
         }
         if (object[id].c.findIndex(i => i.i === channel.id) > -1) object[id].c[object[id].c.findIndex(i => i.i === channel.id)] = channelObject
@@ -971,6 +998,9 @@ async function loadInstances (client, settings, logging, date) {
           if (!c.o.channels.id) { // Get rid of ID.
             for (let i = 0; i < c.c.length; i++) {
               c.c[i].i = undefined
+            }
+            for (let i = 0; i < c.p.length; i++) {
+              c.p[i].i = undefined
             }
           }
           fs.writeFileSync(path.join(tempDir, '[INFO]channels.json'), JSON.stringify(c.c, null, c.o.output.formatted ? c.o.output.whiteSpace : 0))
