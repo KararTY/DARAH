@@ -170,7 +170,8 @@ async function loadInstances (client, settings, logging, date) {
                 if (channel.parent) {
                   parentChannelObject = {
                     i: channel.parent.id,
-                    n: channel.parent.name
+                    n: channel.parent.name,
+                    po: channel.parent.calculatedPosition
                   }
                   if (object[id].p.findIndex(i => i.i === parentChannelObject.i) > -1) object[id].p[object[id].p.findIndex(i => i.i === parentChannelObject.i)] = parentChannelObject
                   else object[id].p.push(parentChannelObject)
@@ -193,7 +194,8 @@ async function loadInstances (client, settings, logging, date) {
               if (channel.parent) {
                 parentChannelObject = {
                   i: channel.parent.id,
-                  n: channel.parent.name
+                  n: channel.parent.name,
+                  po: channel.parent.calculatedPosition
                 }
                 if (object[id].p.findIndex(i => i.i === parentChannelObject.i) > -1) object[id].p[object[id].p.findIndex(i => i.i === parentChannelObject.i)] = parentChannelObject
                 else object[id].p.push(parentChannelObject)
@@ -483,7 +485,8 @@ async function loadInstances (client, settings, logging, date) {
         if (channel.parent) {
           parentChannelObject = {
             i: channel.parent.id,
-            n: channel.parent.name
+            n: channel.parent.name,
+            po: channel.parent.calculatedPosition
           }
           if (object[id].p.findIndex(i => i.i === parentChannelObject.i) > -1) object[id].p[object[id].p.findIndex(i => i.i === parentChannelObject.i)] = parentChannelObject
           else object[id].p.push(parentChannelObject)
@@ -515,11 +518,13 @@ async function loadInstances (client, settings, logging, date) {
                   let attachments
                   if (channelOptions.messages.attachments && msg.attachments.size > 0) {
                     attachments = []
-                    msg.attachments.forEach(attachment => {
-                      attachments.push({ i: auxilliaryCounter, n: channelOptions.information.name ? attachment.filename : undefined, u: channelOptions.channels.id ? attachment.url : undefined })
+                    let tempAttachmentsArray = msg.attachments.array()
+                    for (let ind = 0; ind < tempAttachmentsArray.length; ind++) {
+                      const attachment = tempAttachmentsArray[ind]
+                      attachments.push({ i: `${auxilliaryCounter}-${ind + 1}`, n: channelOptions.information.name ? attachment.filename : undefined, u: channelOptions.channels.id ? attachment.url : undefined })
                       if (Object.entries(channelOptions.downloads).map(i => i[1]).filter(Boolean).length > 0) {
                         promises.push(new Promise((resolve, reject) => {
-                          attachment.id = auxilliaryCounter
+                          attachment.id = `${auxilliaryCounter}-${ind + 1}`
                           let a = attachment
                           let c = channel
                           let i = id
@@ -561,7 +566,7 @@ async function loadInstances (client, settings, logging, date) {
                           })
                         }))
                       }
-                    })
+                    }
                   }
                   let embeds
                   if (channelOptions.messages.embeds && msg.embeds.length > 0) {
@@ -897,7 +902,7 @@ async function loadInstances (client, settings, logging, date) {
                   channelCache[id][channel.id].atSplit++
 
                   object[id].count.messages += messages.m.length
-                  object[id].count.downloads += promises.length
+                  object[id].count.downloads += res.length
                   messages.po = channel.calculatedPosition || 0
 
                   promises = [] // Clear
@@ -927,7 +932,7 @@ async function loadInstances (client, settings, logging, date) {
                 // No messages
                 if ((deletedMessages[channel.id] && deletedMessages[channel.id].length > 0) || messages.m.length > 0) {
                   object[id].count.messages += messages.m.length
-                  object[id].count.downloads += promises.length
+                  object[id].count.downloads += res.length
                   messages.po = channel.calculatedPosition || 0
 
                   // TODO: Save deleted messages too, if we caught any for this channel.

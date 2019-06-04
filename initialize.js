@@ -21,8 +21,8 @@ const applyNewSettings = () => {
     GUILDS: [${settings.archiving.GUILDS.length > 0 ? settings.archiving.GUILDS.map(i => `'${i}'`).join(', ') : ``}], // Guild ids. Use 'ALL' for all.
     GROUPS: [${settings.archiving.GROUPS.length > 0 ? settings.archiving.GROUPS.map(i => `'${i}'`).join(', ') : ``}], // Owner user id. Use 'ALL' for all.
     DIRECTMESSAGES: [${settings.archiving.DIRECTMESSAGES.length > 0 ? settings.archiving.DIRECTMESSAGES.map(i => `'${i}'`).join(', ') : ``}], // User ids. Use 'ALL' for all.
-    tempDir: '${settings.archiving.tempDir}', // Put temp directory here. (__dirname)
-    archiveDir: '${settings.archiving.archiveDir}', // Put archive directory here. (__dirname)
+    tempDir: '${JSON.stringify(settings.archiving.tempDir)}', // Put temp directory here. (__dirname)
+    archiveDir: '${JSON.stringify(settings.archiving.archiveDir)}', // Put archive directory here. (__dirname)
     auto: {
       enabled: ${settings.archiving.auto.enabled},
       cronSchedule: '${settings.archiving.auto.cronSchedule}' // This example cron schedule ('0 0 */1 * *') will run archiver every midnight (00:00).

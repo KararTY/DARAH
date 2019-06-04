@@ -61,6 +61,7 @@
     * `u[].a`: **string** Member discord icon avatar url
     * `u[].b`: **boolean** Member discord account if bot
     * `u[].t`: **Date** Member discord account creation
+    * `u[].j`: **Date** Member joined
     * `u[].r`: **Array** Member guild roles
       * `u[].r[]`: **number** Member guild role index
 ### [INFO]roles.json
