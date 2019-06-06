@@ -869,6 +869,30 @@ async function loadInstances (client, settings, logging, date) {
                       msg.content = msg.content.replace(i, `<:${emoji}:>`)
                     })
                   }
+                  // Edit message content to replace role ids.
+                  if (msg.content.match(/<@&[0-9]+>/g)) {
+                    msg.content.match(/<@&[0-9]+>/g).forEach(i => {
+                      let mID = i.replace(/[^0-9]/g, '')
+                      let firstRoleMention
+                      if (object[id].r.findIndex(i => i.i === mID) === -1) {
+                        let role = msg.member.guild.roles.get(mID)
+                        firstRoleMention = {
+                          po: role.calculatedPosition,
+                          n: role.name,
+                          i: role.id,
+                          t: role.createdTimestamp,
+                          c: role.hexColor,
+                          h: role.hoist,
+                          m: role.members.size,
+                          mg: role.managed,
+                          me: role.mentionable,
+                          p: role.permissions
+                        }
+                        object[id].r.push(firstRoleMention)
+                      }
+                      msg.content = msg.content.replace(i, `<&${object[id].r.findIndex(r => r.i === mID) || 'undefined-role'}>`)
+                    })
+                  }
 
                   messages.m.push({
                     i: channelOptions.messages.id ? msg.id : undefined,

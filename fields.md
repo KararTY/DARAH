@@ -73,7 +73,7 @@
 ### [INFO]emojis.json
   * `e`: **Array{}** Reaction emojis
     * `e[].i`: **string** Reaction emoji id if applicable
-    * `e[].c`: **string** Reaction identifier
+    * `e[].c`: **string** Reaction requires colons if applicable
     * `e[].n`: **string** Reaction name
     * `e[].e`: **string** Reaction in unicode if applicable
     * `e[].a`: **string** Reaction is animated if applicable
