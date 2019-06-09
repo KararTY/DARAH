@@ -594,6 +594,7 @@ async function loadInstances (client, settings, logging, date) {
                         th: embed.thumbnail ? embed.thumbnail.proxyURL : undefined,
                         t: embed.createdTimestamp,
                         ti: embed.title,
+                        u: embed.url,
                         ty: embed.type === 'rich' ? undefined : embed.type,
                         v: embed.video ? embed.video.url : undefined
                       })
