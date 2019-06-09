@@ -128,6 +128,7 @@
         * `m[].c.e[].th`: **string** Message embed thumbnail url if exists
         * `m[].c.e[].t`: **string** Message embed timestamp
         * `m[].c.e[].ti`: **string** Message embed title
+        * `m[].c.e[].u`: **string** Message embed title url
         * `m[].c.e[].ty`: **string** Message embed type
         * `m[].c.e[].v`: **string** Message embed video url if exists
       * `m[].c.r`: **Array{}** Message reactions if exists
