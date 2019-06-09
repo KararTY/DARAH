@@ -577,7 +577,7 @@ async function loadInstances (client, settings, logging, date) {
                         fields = []
                         embed.fields.forEach(field => {
                           fields.push({
-                            l: field.inline,
+                            l: field.inline || undefined,
                             n: field.name,
                             v: field.value
                           })
@@ -586,15 +586,15 @@ async function loadInstances (client, settings, logging, date) {
                       embeds.push({
                         a: embed.author ? { n: embed.author.name, u: embed.author.url, a: embed.author.iconURL } : undefined,
                         c: embed.color ? embed.hexColor : undefined,
-                        d: embed.description,
+                        d: embed.description || undefined,
                         f: fields,
                         fo: embed.footer ? { u: embed.footer.proxyIconURL, v: embed.footer.text } : undefined,
                         i: embed.image ? embed.image.proxyURL : undefined,
                         p: embed.provider ? { n: embed.provider.name, u: embed.provider.url ? embed.provider.url : undefined } : undefined,
                         th: embed.thumbnail ? embed.thumbnail.proxyURL : undefined,
-                        t: embed.createdTimestamp,
-                        ti: embed.title,
-                        u: embed.url,
+                        t: embed.timestamp ? new Date(embed.timestamp).getTime() : undefined, // For some reason embed.timestamp returns a string, but should correctly return a number now.
+                        ti: embed.title || undefined,
+                        u: embed.url || undefined,
                         ty: embed.type === 'rich' ? undefined : embed.type,
                         v: embed.video ? embed.video.url : undefined
                       })

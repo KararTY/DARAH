@@ -1,9 +1,9 @@
-# S.A.R.A.H. - Server Auto Record Archiver Heroine
+# D.A.R.A.H. - Discord Auto Record Archiver Heroine
 ## Archive ALL Discord messages in a guild.
 
 ### [What do the outputted fields stand for?](/fields.md)
 
-### [Want to view your archives? Click here for S.A.R.A.H. Viewer!](https://github.com/kararty/sarah-viewer)
+### [Want to view your archives? Click here for D.A.R.A.H. Viewer!](https://github.com/kararty/darah-viewer)
 
 ### Prerequisites
   * NodeJS version >= 11.10.0

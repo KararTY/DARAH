@@ -126,7 +126,7 @@
           * `m[].c.e[].p.n`: **Object** Message embed provider name
           * `m[].c.e[].p.u`: **Object** Message embed provider url
         * `m[].c.e[].th`: **string** Message embed thumbnail url if exists
-        * `m[].c.e[].t`: **string** Message embed timestamp
+        * `m[].c.e[].t`: **Date** Message embed timestamp
         * `m[].c.e[].ti`: **string** Message embed title
         * `m[].c.e[].u`: **string** Message embed title url
         * `m[].c.e[].ty`: **string** Message embed type
@@ -170,7 +170,7 @@
           * `d[].c.e[].p.n`: **Object** Deleted message embed provider name
           * `d[].c.e[].p.u`: **Object** Deleted message embed provider url
         * `d[].c.e[].th`: **string** Deleted message embed thumbnail url if exists
-        * `d[].c.e[].t`: **string** Deleted message embed timestamp
+        * `d[].c.e[].t`: **Date** Deleted message embed timestamp
         * `d[].c.e[].ti`: **string** Deleted message embed title
         * `d[].c.e[].ty`: **string** Deleted message embed type
         * `d[].c.e[].v`: **string** Deleted message embed video url if exists
