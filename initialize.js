@@ -12,9 +12,6 @@ const applyNewSettings = () => {
   authentication: {
     discord: {
       token: '${settings.authentication.discord.token}'
-    },
-    pastebin: { // WILL HAVE TO THINK ABOUT THIS.
-      token: '${settings.authentication.pastebin.token}'
     }
   },
   archiving: {

@@ -2,9 +2,6 @@ module.exports = {
   authentication: {
     discord: {
       token: ''
-    },
-    pastebin: { // WILL HAVE TO THINK ABOUT THIS.
-      token: ''
     }
   },
   archiving: {
