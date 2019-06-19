@@ -5,11 +5,11 @@
   * `i`: **string** Guild id
   * `a`: **string** Guild acronym
   * `u`: **string** Guild icon url
-  * `l`: **boolean** Guild if large
+  * `l`: **Boolean** Guild if large
   * `m`: **number** Guild member amount
   * `t`: **Date** Guild creation timestamp
   * `af`: **Object** Guild afk channel information
-    * `af.e`: **boolean** Guild if afk channel exists
+    * `af.e`: **Boolean** Guild if afk channel exists
     * `af.i`: **string** Guild afk channel id if exists
     * `af.t`: **number** Guild afk channel timeout in seconds
   * `o`: **string** Guild owner user id
@@ -17,16 +17,16 @@
   * `s`: **string** Guild Partner splash icon url if exists
   * `e`: **number** Guild explicit content filter level
   * `v`: **number** Guild verification level
-  * `ee`: **boolean** Guild if embedded images enabled
+  * `ee`: **Boolean** Guild if embedded images enabled
   * `em`: **Array{}** Guild emojis
     * `em[].n`: **string** Guild emoji name
     * `em[].i`: **string** Guild emoji id
     * `em[].if`: **string** Guild emoji name identifier
-    * `em[].c`: **boolean** Guild emoji requires colons to use
+    * `em[].c`: **Boolean** Guild emoji requires colons to use
     * `em[].u`: **string** Guild emoji image url
-    * `em[].a`: **boolean** Guild emoji if animated
+    * `em[].a`: **Boolean** Guild emoji if animated
     * `em[].t`: **Date** Guild emoji creation timestamp
-    * `em[].m`: **boolean** Guild emoji if is managed by third party(?)
+    * `em[].m`: **Boolean** Guild emoji if is managed by third party(?)
     * `em[].r`: **Array{}** Guild emoji only available to following roles if exists
       * `em[].r[].n`: **string** Guild emoji role name
       * `em[].r[].i`: **string** Guild emoji role id
@@ -36,10 +36,10 @@
     * `r[].i`: **string** Guild role id
     * `r[].t`: **Date** Guild role creation date
     * `r[].c`: **string** Guild role hex color
-    * `r[].h`: **boolean** Guild role if hoisted
+    * `r[].h`: **Boolean** Guild role if hoisted
     * `r[].m`: **number** Guild role amount of guild members in role
-    * `r[].mg`: **boolean** Guild role if is managed by third party(?)
-    * `r[].me`: **boolean** Guild role if is mentionable
+    * `r[].mg`: **Boolean** Guild role if is managed by third party(?)
+    * `r[].me`: **Boolean** Guild role if is mentionable
     * `r[].p`: **number** Guild role permissions number
   * `_at`: **Object** Archival timestamps
     * `_at.t`: **Date** timestamp
@@ -50,7 +50,7 @@
     * `_by.nn`: **string** Account display name
     * `_by.tg`: **string** Account user discord tag
     * `_by.u`: **string** Account icon avatar url
-    * `_by.b`: **boolean** Account if bot
+    * `_by.b`: **Boolean** Account if bot
   * `_app`: **string**
 ### [INFO]users.json
   * `u`: **Array{}** Members & users
@@ -59,7 +59,7 @@
     * `u[].nn`: **string** Member guild nickname if exists
     * `u[].tg`: **string** Member discord tag
     * `u[].a`: **string** Member discord icon avatar url
-    * `u[].b`: **boolean** Member discord account if bot
+    * `u[].b`: **Boolean** Member discord account if bot
     * `u[].t`: **Date** Member discord account creation
     * `u[].j`: **Date** Member joined
     * `u[].r`: **Array** Member guild roles
@@ -99,6 +99,8 @@
       * `c.c[].p`: **Array{}** Channel permission overwrites if exists
         * `c.c[].p[].i`: **string** Channel permission overwrite id
         * `c.c[].p[].ty`: **string** Channel permission overwrite type
+      * `c.c[].nsfw`: **Boolean** Channel marked as NSFW if applicable
+      * `c.c[].rlpu`: **number** Channel rate limit per user if applicable in seconds
 ### [CHANNEL]channel-name(channel id).json
   * `m`: **Array{}** Messages
     * `m[].i`: **string** Message id
@@ -115,7 +117,7 @@
         * `m[].c.e[].c`: **string** Message embed hex color
         * `m[].c.e[].d`: **string** Message embed description
         * `m[].c.e[].f`: **Array{}** Message embed fields object
-          * `m[].c.e[].f[].l`: **boolean** Message embed field if inline
+          * `m[].c.e[].f[].l`: **Boolean** Message embed field if inline
           * `m[].c.e[].f[].n`: **string** Message embed field name
           * `m[].c.e[].f[].v`: **string** Message embed field value
         * `m[].c.e[].fo`: **Object** Message embed footer object
@@ -136,13 +138,13 @@
           * `m[].c.r[].u[]`: **string** Message reaction user id
         * `m[].c.r[].i`: **string** Message reaction id
     * `m[].t`: **Date** Message creation timestamp
-    * `m[].p`: **boolean** Message is pinned if applicable
+    * `m[].p`: **Boolean** Message is pinned if applicable
     * `m[].e`: **Date** Message last edit timestamp if applicable
     * `m[].n`: **string** Message delivery nonce, may be a completely useless field
-    * `m[].s`: **boolean** Message if system
-    * `d[].ty`: **boolean** Message type if applicable
-    * `m[].ts`: **boolean** Message text to speech if used
-    * `m[].es`: **Array{}** Message edits if exists (Not working)
+    * `m[].s`: **Boolean** Message if system
+    * `d[].ty`: **Boolean** Message type if applicable
+    * `m[].ts`: **Boolean** Message text to speech if used
+    * `m[].es`: **Array{}** Message edits if exists *(Not working)*
       * `m[].es[string]:` **string** Message edit content
   * `d`: **Array{}** Deleted messages
     * `d[].i`: **string** Deleted message id
@@ -159,7 +161,7 @@
         * `d[].c.e[].c`: **string** Deleted message embed hex color
         * `d[].c.e[].d`: **string** Deleted message embed description
         * `d[].c.e[].f`: **Array{}** Deleted message embed fields object
-          * `d[].c.e[].f[].l`: **boolean** Deleted message embed field if inline
+          * `d[].c.e[].f[].l`: **Boolean** Deleted message embed field if inline
           * `d[].c.e[].f[].n`: **string** Deleted message embed field name
           * `d[].c.e[].f[].v`: **string** Deleted message embed field value
         * `d[].c.e[].fo`: **Object** Deleted message embed footer object
@@ -179,17 +181,22 @@
           * `d[].c.r[].u[]`: **string** Deleted message reaction user id
         * `m[].c.r[].i`: **string** Deleted message reaction id
     * `d[].t`: **Date** Deleted message creation timestamp
-    * `d[].p`: **boolean** Deleted message is pinned if applicable
+    * `d[].p`: **Boolean** Deleted message is pinned if applicable
     * `d[].e`: **Date** Deleted message last edit timestamp if applicable
     * `d[].n`: **string** Deleted message delivery nonce, may be a completely useless field
-    * `d[].s`: **boolean** Deleted message if system
-    * `d[].ty`: **boolean** Deleted message type if applicable
-    * `d[].ts`: **boolean** Deleted message text to speech if used
+    * `d[].s`: **Boolean** Deleted message if system
+    * `d[].ty`: **Boolean** Deleted message type if applicable
+    * `d[].ts`: **Boolean** Deleted message text to speech if used
     * `d[].es`: **Array{}** Deleted message edits if exists *(Not working)*
       * `d[].es[string]:` **string** Deleted message edit content
 ### Downloads (Directory)
   * `Guild` Directory for guild content.
+    * `Guild/(number counter).(extension)` Guild emojis
+    * `Guild/icon.(extension)` Guild icon
   * `Channels` Directory for channel content
-    * `Channels/[channelId]` Directory for channel
+    * `Channels/(channel id)` Directory for channel
+      * `Channels/(channel id)/[message counter]-[attachment position].(extension if applicable)` Uploaded attachments in channel
   * `Users` Directory for user avatars
+    * `Users/(user counter).(extension)` User profile picture
   * `Emojis` Directory for emojis
+    * `Emojis/(emoji counter).(extension)` Emoji picture

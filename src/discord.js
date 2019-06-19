@@ -136,7 +136,7 @@ async function loadInstances (client, settings, logging, date) {
             lastMsgId: null
           }
           directory = path.join(settings.archiving.archiveDir, 'DARAH_ARCHIVES', '[GUILD]' + channel.guild.id)
-          if (!settings.archiving.override && fs.existsSync(path.join(directory, 'settings.json'))) {
+          if (!settings.archiving.overrule && fs.existsSync(path.join(directory, 'settings.json'))) {
             channelOptions = require(path.join(directory, 'settings.json'))
             if (!channelOptions.fullArchive) channelCache[channel.guild.id][channel.id] = require(path.join(directory, 'cache.json'))[channel.id]
           }
@@ -207,7 +207,9 @@ async function loadInstances (client, settings, logging, date) {
                 po: typeof channel.calculatedPosition === 'number' ? channel.calculatedPosition : undefined,
                 to: channelOptions.channels.topic ? (channel.topic || undefined) : undefined,
                 t: channel.createdTimestamp || undefined,
-                pa: channel.parent ? object[id].p.findIndex(i => i.i === parentChannelObject.i) : undefined
+                pa: channel.parent ? object[id].p.findIndex(i => i.i === parentChannelObject.i) : undefined,
+                nsfw: channel.nsfw || undefined,
+                rlpu: channel.rateLimitPerUser || undefined
               })
             })
 
@@ -348,7 +350,7 @@ async function loadInstances (client, settings, logging, date) {
             lastMsgId: null
           }
           directory = path.join(settings.archiving.archiveDir, 'DARAH_ARCHIVES', '[DM]' + channel.recipient.id)
-          if (!settings.archiving.override && fs.existsSync(path.join(directory, 'settings.json'))) {
+          if (!settings.archiving.overrule && fs.existsSync(path.join(directory, 'settings.json'))) {
             channelOptions = require(path.join(directory, 'settings.json'))
             if (!channelOptions.fullArchive) channelCache[channel.recipient.id][channel.id] = require(path.join(directory, 'cache.json'))[channel.id]
           }
@@ -414,7 +416,7 @@ async function loadInstances (client, settings, logging, date) {
             lastMsgId: null
           }
           directory = path.join(settings.archiving.archiveDir, 'DARAH_ARCHIVES', '[GROUP]' + channel.id)
-          if (!settings.archiving.override && fs.existsSync(path.join(directory, 'settings.json'))) {
+          if (!settings.archiving.overrule && fs.existsSync(path.join(directory, 'settings.json'))) {
             channelOptions = require(path.join(directory, 'settings.json'))
             if (!channelOptions.fullArchive) channelCache[channel.id][channel.id] = require(path.join(directory, 'cache.json'))[channel.id]
           }
@@ -499,10 +501,404 @@ async function loadInstances (client, settings, logging, date) {
           to: channelOptions.channels.topic ? (channel.topic || undefined) : undefined,
           t: channel.createdTimestamp || undefined,
           pa: channel.parent ? object[id].p.findIndex(i => i.i === parentChannelObject.i) : undefined,
-          p: permissionOverwrites.length > 0 ? permissionOverwrites : undefined
+          p: permissionOverwrites.length > 0 ? permissionOverwrites : undefined,
+          nsfw: channel.nsfw || undefined,
+          rlpu: channel.rateLimitPerUser || undefined
         }
         if (object[id].c.findIndex(i => i.i === channel.id) > -1) object[id].c[object[id].c.findIndex(i => i.i === channel.id)] = channelObject
         else object[id].c.push(channelObject)
+
+        // Replace relevant text with array position.
+        function messageReplacer (channel, msg) {
+          // Check https://discord.js.org/#/docs/main/stable/class/Message to see what you can archive.
+          let attachments
+          if (channelOptions.messages.attachments && msg.attachments && msg.attachments.size > 0) {
+            attachments = []
+            let tempAttachmentsArray = msg.attachments.array()
+            for (let ind = 0; ind < tempAttachmentsArray.length; ind++) {
+              const attachment = tempAttachmentsArray[ind]
+              attachments.push({ i: `${auxilliaryCounter}-${ind + 1}`, n: channelOptions.information.name ? attachment.filename : undefined, u: channelOptions.channels.id ? attachment.url : undefined })
+              if (Object.entries(channelOptions.downloads).map(i => i[1]).filter(Boolean).length > 0) {
+                promises.push(new Promise((resolve, reject) => {
+                  attachment.id = `${auxilliaryCounter}-${ind + 1}`
+                  let a = attachment
+                  let c = channel
+                  let i = id
+                  fetch(a.url).then(res => {
+                    if (res.ok) {
+                      let type = res.headers.get('content-type').split('/')[0].toLowerCase()
+                      let extension = res.headers.get('content-type').split('/')[1].toLowerCase()
+                      let usualTypes = ['image', 'video', 'audio', 'text']
+                      if ((type === 'image' && object[i].o.downloads.images) || (type === 'audio' && object[i].o.downloads.audios) || (type === 'text' && object[i].o.downloads.texts) || (type === 'video' && object[i].o.downloads.videos) || (usualTypes.indexOf(type) === -1 && object[i].o.downloads.misc)) {
+                        if (!fs.existsSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads'))) {
+                          // Create 'Downloads' directory.
+                          if (settings.debug) logging.ui.log.write(`${gray('Debug:')} ${gray(bold(`Creating Downloads directory, for ${i}.`))}`)
+                          fs.mkdirSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads'))
+                        }
+                        if (!fs.existsSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads', 'Channels'))) {
+                          // Create 'Channels' directory in 'Downloads' directory.
+                          if (settings.debug) logging.ui.log.write(`${gray('Debug:')} ${gray(bold(`Creating Channels directory in Downloads directory, for ${i}.`))}`)
+                          fs.mkdirSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads', 'Channels'))
+                        }
+                        if (!fs.existsSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads', 'Channels', String(c.calculatedPosition) || '0'))) {
+                          // Create directory for channel in 'Channels' directory.
+                          if (settings.debug) logging.ui.log.write(`${gray('Debug:')} ${gray(bold(`Creating directory for channel in Channels directory, for ${i}.`))}`)
+                          fs.mkdirSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads', 'Channels', String(c.calculatedPosition) || '0'))
+                        }
+
+                        const dest = fs.createWriteStream(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads', 'Channels', String(c.calculatedPosition) || '0', `[${a.id}]${object[i].o.information.name ? `${a.filename}` : `.${extension}`}`))
+                        res.body.pipe(dest)
+                        dest.on('close', () => {
+                          // Finally resolve.
+                          logging.ui.log.write(`${green('Log:')} ${green(bold(`Completed download for ${type} ${a.id}, for ${i}.`))}`)
+                          resolve()
+                        })
+                      } else resolve() // Not downloading.
+                    } else resolve() // Whatever, couldn't get it.
+                  }).catch(e => {
+                    if (settings.debug) console.error(e)
+                    logging.ui.log.write(`${red('Error:')} ${red(bold(`(${e.message}) Failed to download attachment ${a.id}, for ${i}.`))}`)
+                    resolve() // We failed, tell user.
+                  })
+                }))
+              }
+            }
+          }
+          let embeds
+          if (channelOptions.messages.embeds && msg.embeds && msg.embeds.length > 0) {
+            embeds = []
+            msg.embeds.forEach(embed => {
+              let fields
+              if (embed.fields.length > 0) {
+                fields = []
+                embed.fields.forEach(field => {
+                  fields.push({
+                    l: field.inline || undefined,
+                    n: field.name ? messageReplacer(channel, { content: field.name }).msg.content : undefined,
+                    v: field.value ? messageReplacer(channel, { content: field.value }).msg.content : undefined
+                  })
+                })
+              }
+              embeds.push({
+                a: embed.author ? { n: embed.author.name, u: embed.author.url, a: embed.author.iconURL } : undefined,
+                c: embed.color ? embed.hexColor : undefined,
+                d: embed.description ? messageReplacer(channel, { content: embed.description }).msg.content : undefined,
+                f: fields,
+                fo: embed.footer ? { u: embed.footer.proxyIconURL, v: embed.footer.text } : undefined,
+                i: embed.image ? embed.image.proxyURL : undefined,
+                p: embed.provider ? { n: embed.provider.name, u: embed.provider.url ? embed.provider.url : undefined } : undefined,
+                th: embed.thumbnail ? embed.thumbnail.proxyURL : undefined,
+                t: embed.timestamp ? new Date(embed.timestamp).getTime() : undefined, // For some reason embed.timestamp returns a string, but should correctly return a number now.
+                ti: embed.title || undefined,
+                u: embed.url || undefined,
+                ty: embed.type === 'rich' ? undefined : embed.type,
+                v: embed.video ? embed.video.url : undefined
+              })
+            })
+          }
+          let reactions
+          if (channelOptions.messages.reactions && msg.reactions && msg.reactions.size > 0) {
+            reactions = []
+            msg.reactions.forEach(reaction => {
+              if (object[id].e.findIndex(i => i.d === reaction.emoji.identifier) === -1 || (reaction.emoji.id ? object[id].e.find(e => e.i === reaction.emoji.id).retry : false)) {
+                let emoji = {
+                  i: reaction.emoji.id || undefined,
+                  d: reaction.emoji.identifier,
+                  n: reaction.emoji.name,
+                  e: reaction.emoji.toString(),
+                  c: reaction.emoji.requiresColons || undefined,
+                  a: reaction.emoji.animated ? true : undefined,
+                  t: reaction.emoji.createdTimestamp ? reaction.emoji.createdTimestamp : undefined,
+                  m: reaction.emoji.managed ? true : undefined,
+                  u: channelOptions.information.emojis ? reaction.emoji.url ? reaction.emoji.url : reaction.emoji.id ? `https://cdn.discordapp.com/emojis/${reaction.emoji.id}.${reaction.emoji.animated ? 'gif' : 'png'}` : undefined : undefined
+                }
+
+                if (object[id].e.find(e => e.i === reaction.emoji.id) ? object[id].e.find(e => e.i === reaction.emoji.id).retry : false) {
+                  object[id].e[object[id].e.findIndex(e => e.i === reaction.emoji.id)] = emoji
+                } else object[id].e.push(emoji)
+
+                if (channelOptions.downloads.emojis && (reaction.emoji.url || reaction.emoji.id)) {
+                  promises.push(new Promise((resolve, reject) => {
+                    let r = reaction
+                    let i = id
+                    fetch(r.emoji.url || `https://cdn.discordapp.com/emojis/${reaction.emoji.id}.${reaction.emoji.animated ? 'gif' : 'png'}`).then(res => {
+                      if (res.ok) {
+                        let type = res.headers.get('content-type').split('/')[1].toLowerCase()
+                        if (!fs.existsSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads'))) {
+                          // Create 'Downloads' directory.
+                          if (settings.debug) logging.ui.log.write(`${gray('Debug:')} ${gray(bold(`Creating Downloads directory, for ${i}.`))}`)
+                          fs.mkdirSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads'))
+                        }
+                        if (!fs.existsSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads', 'Emojis'))) {
+                          // Create 'Channels' directory in 'Downloads' directory.
+                          if (settings.debug) logging.ui.log.write(`${gray('Debug:')} ${gray(bold(`Creating Emojis directory in Downloads directory, for ${i}.`))}`)
+                          fs.mkdirSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads', 'Emojis'))
+                        }
+
+                        const dest = fs.createWriteStream(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads', 'Emojis', `${String(object[i].e.findIndex(i => i.d === r.emoji.identifier))}.${type}`))
+                        res.body.pipe(dest)
+                        dest.on('close', () => {
+                          // Finally resolve.
+                          logging.ui.log.write(`${green('Log:')} ${green(bold(`Completed download for emoji ${object[i].e.findIndex(i => i.d === r.emoji.identifier)}, for ${i}.`))}`)
+                          resolve()
+                        })
+                      } else resolve() // Whatever, couldn't get it.
+                    }).catch(e => {
+                      if (settings.debug) console.error(e)
+                      logging.ui.log.write(`${red('Error:')} ${red(bold(`(${e.message}) Failed to download emoji ${object[i].e.findIndex(i => i.d === r.emoji.identifier)}, for ${i}.`))}`)
+                      resolve() // We failed, tell user.
+                    })
+                  }))
+                }
+              }
+              reactions.push({ c: reaction.count, u: reaction.users.size > 0 ? reaction.users.map(i => i.id) : undefined, d: object[id].e.findIndex(i => i.d === reaction.emoji.identifier) })
+            })
+          }
+          let firstUserMention
+          if (msg.author && ((object[id].u.findIndex(i => i.i === msg.author.id) === -1) || object[id].u.find(i => i.i === msg.author.id).retry)) {
+            let roles
+            if (channelOptions.members.roles && msg.member) {
+              roles = []
+              let firstRoleMention
+              msg.member.roles.forEach(role => {
+                if (object[id].r.findIndex(i => i.i === role.id) === -1) {
+                  firstRoleMention = {
+                    po: role.calculatedPosition,
+                    n: role.name,
+                    i: role.id,
+                    t: role.createdTimestamp,
+                    c: role.hexColor,
+                    h: role.hoist,
+                    m: role.members.size,
+                    mg: role.managed,
+                    me: role.mentionable,
+                    p: role.permissions
+                  }
+                  object[id].r.push(firstRoleMention)
+                }
+                roles.push(object[id].r.findIndex(i => i.i === role.id))
+              })
+            }
+
+            firstUserMention = {
+              n: channelOptions.members.name ? msg.author.username : undefined,
+              i: msg.author.id, // Before appending to file, check options.
+              nn: channelOptions.members.name ? msg.member ? (msg.member.nickname ? msg.member.nickname : undefined) : undefined : undefined,
+              tg: channelOptions.members.name ? msg.author.tag : undefined,
+              a: channelOptions.members.icon ? msg.author.displayAvatarURL : msg.author.defaultAvatarURL,
+              b: msg.author.bot,
+              t: channelOptions.members.creationDate ? msg.author.createdTimestamp : undefined,
+              j: channelOptions.members.joinDate ? (msg.member ? msg.member.joinedTimestamp : undefined) : undefined,
+              r: roles
+            }
+            if (object[id].u.find(i => i.i === msg.author.id) ? object[id].u.find(i => i.i === msg.author.id).retry : false) {
+              object[id].u[object[id].u.findIndex(i => i.i === msg.author.id)] = firstUserMention
+            } else object[id].u.push(firstUserMention)
+
+            if (channelOptions.downloads.icons && channelOptions.members.icon && (msg.author.avatarURL || msg.author.displayAvatarURL)) {
+              promises.push(new Promise((resolve, reject) => {
+                let m = msg.author
+                let i = id
+                fetch(m.avatarURL || msg.author.displayAvatarURL).then(res => {
+                  if (res.ok) {
+                    let type = res.headers.get('content-type').split('/')[1].toLowerCase()
+                    if (!fs.existsSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads'))) {
+                      // Create 'Downloads' directory.
+                      if (settings.debug) logging.ui.log.write(`${gray('Debug:')} ${gray(bold(`Creating Downloads directory, for ${i}.`))}`)
+                      fs.mkdirSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads'))
+                    }
+                    if (!fs.existsSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads', 'Users'))) {
+                      // Create 'Channels' directory in 'Downloads' directory.
+                      if (settings.debug) logging.ui.log.write(`${gray('Debug:')} ${gray(bold(`Creating Users directory in Downloads directory, for ${i}.`))}`)
+                      fs.mkdirSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads', 'Users'))
+                    }
+
+                    const dest = fs.createWriteStream(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads', 'Users', `${String(object[i].u.findIndex(i => i.i === m.id))}.${type}`))
+                    res.body.pipe(dest)
+                    dest.on('close', () => {
+                      // Finally resolve.
+                      logging.ui.log.write(`${green('Log:')} ${green(bold(`Completed download for user icon ${object[i].u.findIndex(i => i.i === m.id)}, for ${i}.`))}`)
+                      resolve()
+                    })
+                  } else resolve() // Whatever, couldn't get it.
+                }).catch(e => {
+                  if (settings.debug) console.error(e)
+                  logging.ui.log.write(`${red('Error:')} ${red(bold(`(${e.message}) Failed to download user icon ${object[i].u.findIndex(i => i.i === m.id)}, for ${i}.`))}`)
+                  resolve() // We failed, tell user.
+                })
+              }))
+            }
+          }
+          let edits
+          /* // Doesn't work. Client has to be there before edit happens?
+            if (msg.editedTimestamp && msg.edits.length > 0) {
+              edits = []
+              msg.edits.forEach((element) => {
+                edits.push({[element.editedTimestamp]: element.content})
+              })
+            }
+          */
+
+          // Edit message content to replace user ids.
+          if (msg.content.match(/<@!?[0-9]+>/g)) {
+            msg.content.match(/<@!?[0-9]+>/g).forEach(i => {
+              let mID = i.replace(/[^0-9]/g, '')
+              // client.users.get(i.replace(/[^0-9]/g, '')) // TODO
+              let user = object[id].u.findIndex(c => c.i === mID) > -1 ? object[id].u.findIndex(c => c.i === mID) : undefined
+              if (typeof user !== 'number') {
+                firstUserMention = {
+                  i: mID,
+                  retry: true
+                }
+                object[id].u.push(firstUserMention)
+
+                let theUser = msg.mentions ? msg.mentions.users.get(mID) : (client.users.get(mID) || { id: mID })
+                if (theUser) {
+                  object[id].u[object[id].u.findIndex(c => c.i === mID)] = {
+                    n: channelOptions.members.name ? theUser.username : undefined,
+                    i: theUser.id, // Before appending to file, check options.
+                    tg: channelOptions.members.name ? theUser.username + '#' + theUser.discriminator : undefined,
+                    a: channelOptions.members.icon ? (theUser.displayAvatarURL || ((theUser.avatar && theUser.id) ? `https://cdn.discordapp.com/avatars/${theUser.id}/${theUser.avatar}.png` : undefined)) : theUser.defaultAvatarURL,
+                    b: theUser.bot,
+                    t: channelOptions.members.creationDate ? theUser.createdTimestamp : undefined,
+                    j: channelOptions.members.joinDate ? (msg.member ? msg.member.joinedTimestamp : undefined) : undefined,
+                    retry: true
+                  }
+                  if (channelOptions.downloads.icons && channelOptions.members.icon && (theUser.avatarURL || theUser.avatar)) {
+                    promises.push(new Promise((resolve, reject) => {
+                      let m = theUser
+                      let i = id
+                      fetch(m.avatarURL || `https://cdn.discordapp.com/avatars/${theUser.id}/${theUser.avatar}.png`).then(res => {
+                        if (res.ok) {
+                          let type = res.headers.get('content-type').split('/')[1].toLowerCase()
+                          if (!fs.existsSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads'))) {
+                            // Create 'Downloads' directory.
+                            if (settings.debug) logging.ui.log.write(`${gray('Debug:')} ${gray(bold(`Creating Downloads directory, for ${i}.`))}`)
+                            fs.mkdirSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads'))
+                          }
+                          if (!fs.existsSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads', 'Users'))) {
+                            // Create 'Channels' directory in 'Downloads' directory.
+                            if (settings.debug) logging.ui.log.write(`${gray('Debug:')} ${gray(bold(`Creating Users directory in Downloads directory, for ${i}.`))}`)
+                            fs.mkdirSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads', 'Users'))
+                          }
+
+                          const dest = fs.createWriteStream(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads', 'Users', `${String(object[i].u.findIndex(i => i.i === m.id))}.${type}`))
+                          res.body.pipe(dest)
+                          dest.on('close', () => {
+                            // Finally resolve.
+                            logging.ui.log.write(`${green('Log:')} ${green(bold(`Completed download for user icon ${object[i].u.findIndex(i => i.i === m.id)}, for ${i}.`))}`)
+                            resolve()
+                          })
+                        } else resolve() // Whatever, couldn't get it.
+                      }).catch(e => {
+                        if (settings.debug) console.error(e)
+                        logging.ui.log.write(`${red('Error:')} ${red(bold(`(${e.message}) Failed to download user icon ${object[i].u.findIndex(i => i.i === m.id)}, for ${i}.`))}`)
+                        resolve() // We failed, tell user.
+                      })
+                    }))
+                  }
+                }
+              }
+              msg.content = msg.content.replace(i, `<@${object[id].u.findIndex(c => c.i === mID) || 'undefined-user'}>`)
+            })
+          }
+          // Edit message content to replace channel ids.
+          if (msg.content.match(/<#[0-9]+>/g)) {
+            msg.content.match(/<#[0-9]+>/g).forEach(i => {
+              let mID = i.replace(/[^0-9]/g, '')
+              let channel = object[id].c.findIndex(c => c.i === mID) > -1 ? object[id].c.findIndex(c => c.i === mID) : undefined
+              msg.content = msg.content.replace(i, `<#${channel || 'undefined-channel'}>`)
+            })
+          }
+          // Edit message content to replace emojis.
+          if (msg.content.match(/<a?:[\w]+:[0-9]+>/g)) {
+            msg.content.match(/<a?:[\w]+:[0-9]+>/g).forEach(i => {
+              // Check if animated.
+              let mID = i.split(':')[2].replace(/[^0-9]/g, '')
+              let emoji = object[id].e.findIndex(e => e.i === mID) > -1 ? object[id].e.findIndex(e => e.i === mID) : undefined
+              if (typeof emoji !== 'number') {
+                object[id].e.push({
+                  i: mID,
+                  d: i.replace('<:', '').replace('>', ''),
+                  n: i.match(/:[\w]+:/)[0].replace(/:/g, ''),
+                  e: i,
+                  c: true,
+                  a: i.startsWith('<a:') ? true : undefined,
+                  u: channelOptions.information.emojis ? `https://cdn.discordapp.com/emojis/${mID}.${i.startsWith('<a:') ? 'gif' : 'png'}` : undefined,
+                  retry: true
+                })
+
+                let theEmoji = object[id].e[object[id].e.findIndex(e => e.i === mID)]
+                if (channelOptions.downloads.emojis && mID) {
+                  promises.push(new Promise((resolve, reject) => {
+                    let r = theEmoji
+                    let i = id
+                    fetch(r.u).then(res => {
+                      if (res.ok) {
+                        let type = res.headers.get('content-type').split('/')[1].toLowerCase()
+                        if (!fs.existsSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads'))) {
+                          // Create 'Downloads' directory.
+                          if (settings.debug) logging.ui.log.write(`${gray('Debug:')} ${gray(bold(`Creating Downloads directory, for ${i}.`))}`)
+                          fs.mkdirSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads'))
+                        }
+                        if (!fs.existsSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads', 'Emojis'))) {
+                          // Create 'Channels' directory in 'Downloads' directory.
+                          if (settings.debug) logging.ui.log.write(`${gray('Debug:')} ${gray(bold(`Creating Emojis directory in Downloads directory, for ${i}.`))}`)
+                          fs.mkdirSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads', 'Emojis'))
+                        }
+
+                        const dest = fs.createWriteStream(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads', 'Emojis', `${String(object[i].e.findIndex(e => e.i === mID))}.${type}`))
+                        res.body.pipe(dest)
+                        dest.on('close', () => {
+                          // Finally resolve.
+                          logging.ui.log.write(`${green('Log:')} ${green(bold(`Completed download for emoji ${object[i].e.findIndex(e => e.i === mID)}, for ${i}.`))}`)
+                          resolve()
+                        })
+                      } else resolve() // Whatever, couldn't get it.
+                    }).catch(e => {
+                      if (settings.debug) console.error(e)
+                      logging.ui.log.write(`${red('Error:')} ${red(bold(`(${e.message}) Failed to download emoji ${object[i].e.findIndex(e => e.i === mID)}, for ${i}.`))}`)
+                      resolve() // We failed, tell user.
+                    })
+                  }))
+                }
+              }
+              msg.content = msg.content.replace(i, `<:${object[id].e.findIndex(e => e.i === mID) || 'undefined-emoji'}:>`)
+            })
+          }
+          // Edit message content to replace role ids.
+          if (msg.content.match(/<@&[0-9]+>/g)) {
+            msg.content.match(/<@&[0-9]+>/g).forEach(i => {
+              let mID = i.replace(/[^0-9]/g, '')
+              let firstRoleMention
+              if (object[id].r.findIndex(i => i.i === mID) === -1) {
+                let role = channel.guild.roles.get(mID)
+                logging.ui.log.write(`${red('DEBUG:')} ${gray(bold(`${channel} | ${role} | ${msg.content}`))}`)
+                if (role) {
+                  firstRoleMention = {
+                    po: role.calculatedPosition,
+                    n: role.name,
+                    i: role.id,
+                    t: role.createdTimestamp,
+                    c: role.hexColor,
+                    h: role.hoist,
+                    m: role.members.size,
+                    mg: role.managed,
+                    me: role.mentionable,
+                    p: role.permissions
+                  }
+                } else {
+                  firstRoleMention = {
+                    i: mID
+                  }
+                }
+                object[id].r.push(firstRoleMention)
+              }
+              msg.content = msg.content.replace(i, `<&${object[id].r.findIndex(r => r.i === mID) || 'undefined-role'}>`)
+            })
+          }
+          return { attachments, embeds, reactions, firstUserMention, edits, msg }
+        }
 
         function fetchMessages (channel, before, after) {
           channel.fetchMessages({ limit: 100, before: before, after: after }).then(msg => {
@@ -514,395 +910,16 @@ async function loadInstances (client, settings, logging, date) {
                 if (!msg.system) {
                   auxilliaryCounter++
 
-                  // Check https://discord.js.org/#/docs/main/stable/class/Message to see what you can archive.
-                  let attachments
-                  if (channelOptions.messages.attachments && msg.attachments.size > 0) {
-                    attachments = []
-                    let tempAttachmentsArray = msg.attachments.array()
-                    for (let ind = 0; ind < tempAttachmentsArray.length; ind++) {
-                      const attachment = tempAttachmentsArray[ind]
-                      attachments.push({ i: `${auxilliaryCounter}-${ind + 1}`, n: channelOptions.information.name ? attachment.filename : undefined, u: channelOptions.channels.id ? attachment.url : undefined })
-                      if (Object.entries(channelOptions.downloads).map(i => i[1]).filter(Boolean).length > 0) {
-                        promises.push(new Promise((resolve, reject) => {
-                          attachment.id = `${auxilliaryCounter}-${ind + 1}`
-                          let a = attachment
-                          let c = channel
-                          let i = id
-                          fetch(a.url).then(res => {
-                            if (res.ok) {
-                              let type = res.headers.get('content-type').split('/')[0].toLowerCase()
-                              let extension = res.headers.get('content-type').split('/')[1].toLowerCase()
-                              let usualTypes = ['image', 'video', 'audio', 'text']
-                              if ((type === 'image' && object[i].o.downloads.images) || (type === 'audio' && object[i].o.downloads.audios) || (type === 'text' && object[i].o.downloads.texts) || (type === 'video' && object[i].o.downloads.videos) || (usualTypes.indexOf(type) === -1 && object[i].o.downloads.misc)) {
-                                if (!fs.existsSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads'))) {
-                                  // Create 'Downloads' directory.
-                                  if (settings.debug) logging.ui.log.write(`${gray('Debug:')} ${gray(bold(`Creating Downloads directory, for ${i}.`))}`)
-                                  fs.mkdirSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads'))
-                                }
-                                if (!fs.existsSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads', 'Channels'))) {
-                                  // Create 'Channels' directory in 'Downloads' directory.
-                                  if (settings.debug) logging.ui.log.write(`${gray('Debug:')} ${gray(bold(`Creating Channels directory in Downloads directory, for ${i}.`))}`)
-                                  fs.mkdirSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads', 'Channels'))
-                                }
-                                if (!fs.existsSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads', 'Channels', String(c.calculatedPosition) || '0'))) {
-                                  // Create directory for channel in 'Channels' directory.
-                                  if (settings.debug) logging.ui.log.write(`${gray('Debug:')} ${gray(bold(`Creating directory for channel in Channels directory, for ${i}.`))}`)
-                                  fs.mkdirSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads', 'Channels', String(c.calculatedPosition) || '0'))
-                                }
-
-                                const dest = fs.createWriteStream(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads', 'Channels', String(c.calculatedPosition) || '0', `[${a.id}]${object[i].o.information.name ? `${a.filename}` : `.${extension}`}`))
-                                res.body.pipe(dest)
-                                dest.on('close', () => {
-                                  // Finally resolve.
-                                  logging.ui.log.write(`${green('Log:')} ${green(bold(`Completed download for ${type} ${a.id}, for ${i}.`))}`)
-                                  resolve()
-                                })
-                              } else resolve() // Not downloading.
-                            } else resolve() // Whatever, couldn't get it.
-                          }).catch(e => {
-                            if (settings.debug) console.error(e)
-                            logging.ui.log.write(`${red('Error:')} ${red(bold(`(${e.message}) Failed to download attachment ${a.id}, for ${i}.`))}`)
-                            resolve() // We failed, tell user.
-                          })
-                        }))
-                      }
-                    }
-                  }
-                  let embeds
-                  if (channelOptions.messages.embeds && msg.embeds.length > 0) {
-                    embeds = []
-                    msg.embeds.forEach(embed => {
-                      let fields
-                      if (embed.fields.length > 0) {
-                        fields = []
-                        embed.fields.forEach(field => {
-                          fields.push({
-                            l: field.inline || undefined,
-                            n: field.name,
-                            v: field.value
-                          })
-                        })
-                      }
-                      embeds.push({
-                        a: embed.author ? { n: embed.author.name, u: embed.author.url, a: embed.author.iconURL } : undefined,
-                        c: embed.color ? embed.hexColor : undefined,
-                        d: embed.description || undefined,
-                        f: fields,
-                        fo: embed.footer ? { u: embed.footer.proxyIconURL, v: embed.footer.text } : undefined,
-                        i: embed.image ? embed.image.proxyURL : undefined,
-                        p: embed.provider ? { n: embed.provider.name, u: embed.provider.url ? embed.provider.url : undefined } : undefined,
-                        th: embed.thumbnail ? embed.thumbnail.proxyURL : undefined,
-                        t: embed.timestamp ? new Date(embed.timestamp).getTime() : undefined, // For some reason embed.timestamp returns a string, but should correctly return a number now.
-                        ti: embed.title || undefined,
-                        u: embed.url || undefined,
-                        ty: embed.type === 'rich' ? undefined : embed.type,
-                        v: embed.video ? embed.video.url : undefined
-                      })
-                    })
-                  }
-                  let reactions
-                  if (channelOptions.messages.reactions && msg.reactions.size > 0) {
-                    reactions = []
-                    msg.reactions.forEach(reaction => {
-                      if (object[id].e.findIndex(i => i.d === reaction.emoji.identifier) === -1 || (reaction.emoji.id ? object[id].e.find(e => e.i === reaction.emoji.id).retry : false)) {
-                        let emoji = {
-                          i: reaction.emoji.id || undefined,
-                          d: reaction.emoji.identifier,
-                          n: reaction.emoji.name,
-                          e: reaction.emoji.toString(),
-                          c: reaction.emoji.requiresColons || undefined,
-                          a: reaction.emoji.animated ? true : undefined,
-                          t: reaction.emoji.createdTimestamp ? reaction.emoji.createdTimestamp : undefined,
-                          m: reaction.emoji.managed ? true : undefined,
-                          u: channelOptions.information.emojis ? reaction.emoji.url ? reaction.emoji.url : reaction.emoji.id ? `https://cdn.discordapp.com/emojis/${reaction.emoji.id}.${reaction.emoji.animated ? 'gif' : 'png'}` : undefined : undefined
-                        }
-
-                        if (object[id].e.find(e => e.i === reaction.emoji.id) ? object[id].e.find(e => e.i === reaction.emoji.id).retry : false) {
-                          object[id].e[object[id].e.findIndex(e => e.i === reaction.emoji.id)] = emoji
-                        } else object[id].e.push(emoji)
-
-                        if (channelOptions.downloads.emojis && (reaction.emoji.url || reaction.emoji.id)) {
-                          promises.push(new Promise((resolve, reject) => {
-                            let r = reaction
-                            let i = id
-                            fetch(r.emoji.url || `https://cdn.discordapp.com/emojis/${reaction.emoji.id}.${reaction.emoji.animated ? 'gif' : 'png'}`).then(res => {
-                              if (res.ok) {
-                                let type = res.headers.get('content-type').split('/')[1].toLowerCase()
-                                if (!fs.existsSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads'))) {
-                                  // Create 'Downloads' directory.
-                                  if (settings.debug) logging.ui.log.write(`${gray('Debug:')} ${gray(bold(`Creating Downloads directory, for ${i}.`))}`)
-                                  fs.mkdirSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads'))
-                                }
-                                if (!fs.existsSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads', 'Emojis'))) {
-                                  // Create 'Channels' directory in 'Downloads' directory.
-                                  if (settings.debug) logging.ui.log.write(`${gray('Debug:')} ${gray(bold(`Creating Emojis directory in Downloads directory, for ${i}.`))}`)
-                                  fs.mkdirSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads', 'Emojis'))
-                                }
-
-                                const dest = fs.createWriteStream(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads', 'Emojis', `${String(object[i].e.findIndex(i => i.d === r.emoji.identifier))}.${type}`))
-                                res.body.pipe(dest)
-                                dest.on('close', () => {
-                                  // Finally resolve.
-                                  logging.ui.log.write(`${green('Log:')} ${green(bold(`Completed download for emoji ${object[i].e.findIndex(i => i.d === r.emoji.identifier)}, for ${i}.`))}`)
-                                  resolve()
-                                })
-                              } else resolve() // Whatever, couldn't get it.
-                            }).catch(e => {
-                              if (settings.debug) console.error(e)
-                              logging.ui.log.write(`${red('Error:')} ${red(bold(`(${e.message}) Failed to download emoji ${object[i].e.findIndex(i => i.d === r.emoji.identifier)}, for ${i}.`))}`)
-                              resolve() // We failed, tell user.
-                            })
-                          }))
-                        }
-                      }
-                      reactions.push({ c: reaction.count, u: reaction.users.size > 0 ? reaction.users.map(i => i.id) : undefined, d: object[id].e.findIndex(i => i.d === reaction.emoji.identifier) })
-                    })
-                  }
-                  let firstUserMention
-                  if ((object[id].u.findIndex(i => i.i === msg.author.id) === -1) || object[id].u.find(i => i.i === msg.author.id).retry) {
-                    let roles
-                    if (channelOptions.members.roles && msg.member) {
-                      roles = []
-                      let firstRoleMention
-                      msg.member.roles.forEach(role => {
-                        if (object[id].r.findIndex(i => i.i === role.id) === -1) {
-                          firstRoleMention = {
-                            po: role.calculatedPosition,
-                            n: role.name,
-                            i: role.id,
-                            t: role.createdTimestamp,
-                            c: role.hexColor,
-                            h: role.hoist,
-                            m: role.members.size,
-                            mg: role.managed,
-                            me: role.mentionable,
-                            p: role.permissions
-                          }
-                          object[id].r.push(firstRoleMention)
-                        }
-                        roles.push(object[id].r.findIndex(i => i.i === role.id))
-                      })
-                    }
-
-                    firstUserMention = {
-                      n: channelOptions.members.name ? msg.author.username : undefined,
-                      i: msg.author.id, // Before appending to file, check options.
-                      nn: channelOptions.members.name ? msg.member ? (msg.member.nickname ? msg.member.nickname : undefined) : undefined : undefined,
-                      tg: channelOptions.members.name ? msg.author.tag : undefined,
-                      a: channelOptions.members.icon ? msg.author.displayAvatarURL : msg.author.defaultAvatarURL,
-                      b: msg.author.bot,
-                      t: channelOptions.members.creationDate ? msg.author.createdTimestamp : undefined,
-                      j: channelOptions.members.joinDate ? (msg.member ? msg.member.joinedTimestamp : undefined) : undefined,
-                      r: roles
-                    }
-                    if (object[id].u.find(i => i.i === msg.author.id) ? object[id].u.find(i => i.i === msg.author.id).retry : false) {
-                      object[id].u[object[id].u.findIndex(i => i.i === msg.author.id)] = firstUserMention
-                    } else object[id].u.push(firstUserMention)
-
-                    if (channelOptions.downloads.icons && channelOptions.members.icon && (msg.author.avatarURL || msg.author.displayAvatarURL)) {
-                      promises.push(new Promise((resolve, reject) => {
-                        let m = msg.author
-                        let i = id
-                        fetch(m.avatarURL || msg.author.displayAvatarURL).then(res => {
-                          if (res.ok) {
-                            let type = res.headers.get('content-type').split('/')[1].toLowerCase()
-                            if (!fs.existsSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads'))) {
-                              // Create 'Downloads' directory.
-                              if (settings.debug) logging.ui.log.write(`${gray('Debug:')} ${gray(bold(`Creating Downloads directory, for ${i}.`))}`)
-                              fs.mkdirSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads'))
-                            }
-                            if (!fs.existsSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads', 'Users'))) {
-                              // Create 'Channels' directory in 'Downloads' directory.
-                              if (settings.debug) logging.ui.log.write(`${gray('Debug:')} ${gray(bold(`Creating Users directory in Downloads directory, for ${i}.`))}`)
-                              fs.mkdirSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads', 'Users'))
-                            }
-
-                            const dest = fs.createWriteStream(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads', 'Users', `${String(object[i].u.findIndex(i => i.i === m.id))}.${type}`))
-                            res.body.pipe(dest)
-                            dest.on('close', () => {
-                              // Finally resolve.
-                              logging.ui.log.write(`${green('Log:')} ${green(bold(`Completed download for user icon ${object[i].u.findIndex(i => i.i === m.id)}, for ${i}.`))}`)
-                              resolve()
-                            })
-                          } else resolve() // Whatever, couldn't get it.
-                        }).catch(e => {
-                          if (settings.debug) console.error(e)
-                          logging.ui.log.write(`${red('Error:')} ${red(bold(`(${e.message}) Failed to download user icon ${object[i].u.findIndex(i => i.i === m.id)}, for ${i}.`))}`)
-                          resolve() // We failed, tell user.
-                        })
-                      }))
-                    }
-                  }
-                  let edits
-                  /* // Doesn't work. Client has to be there before edit happens?
-                    if (msg.editedTimestamp && msg.edits.length > 0) {
-                      edits = []
-                      msg.edits.forEach((element) => {
-                        edits.push({[element.editedTimestamp]: element.content})
-                      })
-                    }
-                  */
-
-                  // Edit message content to replace user ids.
-                  if (msg.content.match(/<@!?[0-9]+>/g)) {
-                    msg.content.match(/<@!?[0-9]+>/g).forEach(i => {
-                      let mID = i.replace(/[^0-9]/g, '')
-                      // client.users.get(i.replace(/[^0-9]/g, '')) // TODO
-                      let user = object[id].u.findIndex(c => c.i === mID) > -1 ? object[id].u.findIndex(c => c.i === mID) : undefined
-                      if (typeof user !== 'number') {
-                        firstUserMention = {
-                          i: mID,
-                          retry: true
-                        }
-                        object[id].u.push(firstUserMention)
-
-                        let theUser = msg.mentions.users.get(mID)
-                        if (theUser) {
-                          object[id].u[object[id].u.findIndex(c => c.i === mID)] = {
-                            n: channelOptions.members.name ? theUser.username : undefined,
-                            i: theUser.id, // Before appending to file, check options.
-                            tg: channelOptions.members.name ? theUser.username + '#' + theUser.discriminator : undefined,
-                            a: channelOptions.members.icon ? (theUser.displayAvatarURL || `https://cdn.discordapp.com/avatars/${theUser.id}/${theUser.avatar}.png`) : theUser.defaultAvatarURL,
-                            b: theUser.bot,
-                            t: channelOptions.members.creationDate ? theUser.createdTimestamp : undefined,
-                            j: channelOptions.members.joinDate ? (msg.member ? msg.member.joinedTimestamp : undefined) : undefined,
-                            retry: true
-                          }
-                          if (channelOptions.downloads.icons && channelOptions.members.icon && (theUser.avatarURL || theUser.avatar)) {
-                            promises.push(new Promise((resolve, reject) => {
-                              let m = theUser
-                              let i = id
-                              fetch(m.avatarURL || `https://cdn.discordapp.com/avatars/${theUser.id}/${theUser.avatar}.png`).then(res => {
-                                if (res.ok) {
-                                  let type = res.headers.get('content-type').split('/')[1].toLowerCase()
-                                  if (!fs.existsSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads'))) {
-                                    // Create 'Downloads' directory.
-                                    if (settings.debug) logging.ui.log.write(`${gray('Debug:')} ${gray(bold(`Creating Downloads directory, for ${i}.`))}`)
-                                    fs.mkdirSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads'))
-                                  }
-                                  if (!fs.existsSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads', 'Users'))) {
-                                    // Create 'Channels' directory in 'Downloads' directory.
-                                    if (settings.debug) logging.ui.log.write(`${gray('Debug:')} ${gray(bold(`Creating Users directory in Downloads directory, for ${i}.`))}`)
-                                    fs.mkdirSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads', 'Users'))
-                                  }
-
-                                  const dest = fs.createWriteStream(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads', 'Users', `${String(object[i].u.findIndex(i => i.i === m.id))}.${type}`))
-                                  res.body.pipe(dest)
-                                  dest.on('close', () => {
-                                    // Finally resolve.
-                                    logging.ui.log.write(`${green('Log:')} ${green(bold(`Completed download for user icon ${object[i].u.findIndex(i => i.i === m.id)}, for ${i}.`))}`)
-                                    resolve()
-                                  })
-                                } else resolve() // Whatever, couldn't get it.
-                              }).catch(e => {
-                                if (settings.debug) console.error(e)
-                                logging.ui.log.write(`${red('Error:')} ${red(bold(`(${e.message}) Failed to download user icon ${object[i].u.findIndex(i => i.i === m.id)}, for ${i}.`))}`)
-                                resolve() // We failed, tell user.
-                              })
-                            }))
-                          }
-                        }
-                      }
-                      msg.content = msg.content.replace(i, `<@${object[id].u.findIndex(c => c.i === mID) || 'undefined-user'}>`)
-                    })
-                  }
-                  // Edit message content to replace channel ids.
-                  if (msg.content.match(/<#[0-9]+>/g)) {
-                    msg.content.match(/<#[0-9]+>/g).forEach(i => {
-                      let mID = i.replace(/[^0-9]/g, '')
-                      let channel = object[id].c.findIndex(c => c.i === mID) > -1 ? object[id].c.findIndex(c => c.i === mID) : undefined
-                      msg.content = msg.content.replace(i, `<#${channel || 'undefined-channel'}>`)
-                    })
-                  }
-                  // Edit message content to replace emojis.
-                  if (msg.content.match(/<a?:[\w]+:[0-9]+>/g)) {
-                    msg.content.match(/<a?:[\w]+:[0-9]+>/g).forEach(i => {
-                      // Check if animated.
-                      let mID = i.split(':')[2].replace(/[^0-9]/g, '')
-                      let emoji = object[id].e.findIndex(e => e.i === mID) > -1 ? object[id].e.findIndex(e => e.i === mID) : undefined
-                      if (typeof emoji !== 'number') {
-                        object[id].e.push({
-                          i: mID,
-                          d: i.replace('<:', '').replace('>', ''),
-                          n: i.match(/:[\w]+:/)[0].replace(/:/g, ''),
-                          e: i,
-                          c: true,
-                          a: i.startsWith('<a:') ? true : undefined,
-                          u: channelOptions.information.emojis ? `https://cdn.discordapp.com/emojis/${mID}.${i.startsWith('<a:') ? 'gif' : 'png'}` : undefined,
-                          retry: true
-                        })
-
-                        let theEmoji = object[id].e[object[id].e.findIndex(e => e.i === mID)]
-                        if (channelOptions.downloads.emojis && mID) {
-                          promises.push(new Promise((resolve, reject) => {
-                            let r = theEmoji
-                            let i = id
-                            fetch(r.u).then(res => {
-                              if (res.ok) {
-                                let type = res.headers.get('content-type').split('/')[1].toLowerCase()
-                                if (!fs.existsSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads'))) {
-                                  // Create 'Downloads' directory.
-                                  if (settings.debug) logging.ui.log.write(`${gray('Debug:')} ${gray(bold(`Creating Downloads directory, for ${i}.`))}`)
-                                  fs.mkdirSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads'))
-                                }
-                                if (!fs.existsSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads', 'Emojis'))) {
-                                  // Create 'Channels' directory in 'Downloads' directory.
-                                  if (settings.debug) logging.ui.log.write(`${gray('Debug:')} ${gray(bold(`Creating Emojis directory in Downloads directory, for ${i}.`))}`)
-                                  fs.mkdirSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads', 'Emojis'))
-                                }
-
-                                const dest = fs.createWriteStream(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[i].type + i, 'Downloads', 'Emojis', `${String(object[i].e.findIndex(e => e.i === mID))}.${type}`))
-                                res.body.pipe(dest)
-                                dest.on('close', () => {
-                                  // Finally resolve.
-                                  logging.ui.log.write(`${green('Log:')} ${green(bold(`Completed download for emoji ${object[i].e.findIndex(e => e.i === mID)}, for ${i}.`))}`)
-                                  resolve()
-                                })
-                              } else resolve() // Whatever, couldn't get it.
-                            }).catch(e => {
-                              if (settings.debug) console.error(e)
-                              logging.ui.log.write(`${red('Error:')} ${red(bold(`(${e.message}) Failed to download emoji ${object[i].e.findIndex(e => e.i === mID)}, for ${i}.`))}`)
-                              resolve() // We failed, tell user.
-                            })
-                          }))
-                        }
-                      }
-                      msg.content = msg.content.replace(i, `<:${object[id].e.findIndex(e => e.i === mID) || 'undefined-emoji'}:>`)
-                    })
-                  }
-                  // Edit message content to replace role ids.
-                  if (msg.content.match(/<@&[0-9]+>/g)) {
-                    msg.content.match(/<@&[0-9]+>/g).forEach(i => {
-                      let mID = i.replace(/[^0-9]/g, '')
-                      let firstRoleMention
-                      if (object[id].r.findIndex(i => i.i === mID) === -1) {
-                        let role = msg.member.guild.roles.get(mID)
-                        firstRoleMention = {
-                          po: role.calculatedPosition,
-                          n: role.name,
-                          i: role.id,
-                          t: role.createdTimestamp,
-                          c: role.hexColor,
-                          h: role.hoist,
-                          m: role.members.size,
-                          mg: role.managed,
-                          me: role.mentionable,
-                          p: role.permissions
-                        }
-                        object[id].r.push(firstRoleMention)
-                      }
-                      msg.content = msg.content.replace(i, `<&${object[id].r.findIndex(r => r.i === mID) || 'undefined-role'}>`)
-                    })
-                  }
+                  let editedMessage = messageReplacer(channel, msg)
 
                   messages.m.push({
                     i: channelOptions.messages.id ? msg.id : undefined,
                     u: object[id].u.findIndex(i => i.i === msg.author.id),
                     c: {
-                      m: msg.content,
-                      a: attachments,
-                      e: embeds,
-                      r: reactions
+                      m: editedMessage.msg.content,
+                      a: editedMessage.attachments,
+                      e: editedMessage.embeds,
+                      r: editedMessage.reactions
                     },
                     t: msg.createdTimestamp,
                     p: msg.pinned ? true : undefined,
@@ -911,7 +928,7 @@ async function loadInstances (client, settings, logging, date) {
                     s: msg.system ? true : undefined,
                     ty: msg.type === 'DEFAULT' ? undefined : msg.type,
                     ts: msg.tts ? true : undefined,
-                    es: edits
+                    es: editedMessage.edits
                   })
                   channelCache[id][channel.id].count++
                   if (channelCache[id][channel.id].lastMsgId ? (Number(msg.id) > Number(channelCache[id][channel.id].lastMsgId)) : true) channelCache[id][channel.id].lastMsgId = msg.id

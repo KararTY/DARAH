@@ -90,6 +90,7 @@ const client = new Client()
 let loginFailed
 
 const inquirer = require('inquirer')
+const prompt = inquirer.createPromptModule()
 const { red, green, gray, bold, underline, redBright, blue } = require('colorette')
 
 const ui = new inquirer.ui.BottomBar()
@@ -192,7 +193,7 @@ if (settings.archiving.auto.enabled) {
     })
   }
 }
-inquirer.prompt({
+prompt({
   type: 'list',
   name: 'acceptTOS',
   message: `Have you read and accepted Discord's Developer Terms of Service?\n${blue(underline('https://discordapp.com/developers/docs/legal'))}\nDo you understand that you have to take all\nresponsibility for any and all consequences as a\nresult of running this script?\n`,
@@ -220,129 +221,133 @@ inquirer.prompt({
   }
 
   Promise.all(prom).then(res => {
-    inquirer.prompt(res[0] || loginQuestion).then(answers => {
+    prompt(res[0] || loginQuestion).then(answers => {
       delete answers['discordToken'] // Get rid of it.
-      new Promise((resolve, reject) => {
-        if (settings.archiving.GROUPS.length === 0 && settings.archiving.GUILDS.length === 0 && settings.archiving.DIRECTMESSAGES.length === 0) {
-          let guilds = []
-          let places = {
-            guilds: [],
-            directMessages: [],
-            groups: []
-          }
-          client.channels.filter(i => {
-            switch (i.type) {
-              case 'dm':
-                return true
-              case 'group':
-                return true
-              case 'text':
-                let guild = client.guilds.get(i.guild.id)
-                return guild.channels.get(i.id).memberPermissions(guild.member(client.user.id)).has('READ_MESSAGE_HISTORY') && guild.channels.get(i.id).memberPermissions(guild.member(client.user.id)).has('READ_MESSAGES')
-              default:
-                return false
-            }
-          }).map(i => {
-            if (i.type === 'dm') {
-              places.directMessages.push({ name: `${i.recipient.username} (${i.recipient.id})`, value: `${i.type},${i.recipient.id}` })
-            } else if (i.type === 'text') {
-              if (guilds.indexOf(i.guild.id) === -1) {
-                places.guilds.push({ name: `(${i.guild.nameAcronym}) ${i.guild.name} (${i.guild.id})`, value: `${i.type},${i.guild.id}` })
-                guilds.push(i.guild.id)
-              }
-            } else if (i.type === 'group') {
-              places.groups.push({ name: `${i.name} (${i.id})`, value: `${i.type},${i.ownerID}` })
-            }
-          })
-          let chooseChannels = {
-            type: 'checkbox',
-            name: 'chosenChannels',
-            choices: [],
-            message: 'Please choose what to archive (Multiple choices):\n',
-            validate: function (vals) {
-              if (vals.length < 1) {
-                return 'Choose at least one.'
-              }
-              return true
-            }
-          }
-          if (places.guilds.length > 0) {
-            chooseChannels.choices.push(new inquirer.Separator('= Guilds ='))
-            chooseChannels.choices.push({ name: 'ALL', checked: true, value: 'text,ALL' })
-            places.guilds.forEach(i => {
-              chooseChannels.choices.push(i)
-            })
-          }
-          if (places.groups.length > 0) {
-            chooseChannels.choices.push(new inquirer.Separator('= Groups ='))
-            chooseChannels.choices.push({ name: 'ALL', checked: true, value: 'group,ALL' })
-            places.groups.forEach(i => {
-              chooseChannels.choices.push(i)
-            })
-          }
-          if (places.directMessages.length > 0) {
-            chooseChannels.choices.push(new inquirer.Separator('= Direct messages ='))
-            chooseChannels.choices.push({ name: 'ALL', checked: true, value: 'dm,ALL' })
-            places.directMessages.forEach(i => {
-              chooseChannels.choices.push(i)
-            })
-          }
-          resolve(chooseChannels)
-        } else resolve()
-      }).then(res => {
-        if (res) questions.push(res)
-        if (questions.length > 0) {
-          inquirer.prompt(questions).then(answers => {
-            if (typeof answers['tempDir'] === 'string') {
-              settings.archiving.tempDir = answers['tempDir'].length === 0
-                ? __dirname
-                : answers['tempDir'].trim()
-            }
-            if (typeof answers['archiveDir'] === 'string') {
-              settings.archiving.archiveDir = answers['archiveDir'].length === 0
-                ? __dirname
-                : answers['archiveDir'].trim()
-            }
-            if (typeof answers['cronSchedule'] === 'string') {
-              settings.archiving.auto.cronSchedule = answers['cronSchedule'].length === 0
-                ? '0 0 */1 * *'
-                : answers['cronSchedule'].trim()
-            }
-            if (answers['chosenChannels']) {
-              answers['chosenChannels'].forEach(i => {
-                let type = i.split(',')[0] === 'dm' ? 'DIRECTMESSAGES' : i.split(',')[0] === 'group' ? 'GROUPS' : 'GUILDS'
-                let id = i.split(',')[1]
-                settings.archiving[type].push(id)
-              })
-            }
-
-            // Validation passed.
-            if (answers['chosenChannels'] || answers.length > 0) {
-              inquirer.prompt({
-                type: 'list',
-                name: 'saveSettings',
-                message: 'Do you want to save your choices to settings.js?\n',
-                choices: ['Yes', 'No']
-              }).then(answers => {
-                if (answers['saveSettings'] === 'Yes') {
-                  if (settings.debug) ui.log.write(`${gray('Debug:')} ${gray(bold('Creating backup file of existing settings file.'))}`)
-                  fs.writeFileSync(path.join(__dirname, 'settings.js.bkp'), JSON.stringify(require('./settings.js'), null, 2))
-                  if (settings.debug) ui.log.write(`${gray('Debug:')} ${gray(bold('Writing new data to settings file.'))}`)
-                  fs.writeFileSync(path.join(__dirname, 'settings.js'), applyNewSettings())
-                  // After that is complete, initialize auto or single-use.
-                  start()
-                } else start()
-              })
-            } else {
-              // Just token was inputted, probably, initialize auto or single-use.
-              start()
-            }
-          })
-        } else {
-          // Initialize auto or single-use.
-          start()
+      let chooseChannels
+      if (settings.archiving.GROUPS.length === 0 && settings.archiving.GUILDS.length === 0 && settings.archiving.DIRECTMESSAGES.length === 0) {
+        let guilds = []
+        let places = {
+          guilds: [],
+          directMessages: [],
+          groups: []
         }
-      })
+        client.channels.filter(i => {
+          switch (i.type) {
+            case 'dm':
+              return true
+            case 'group':
+              return true
+            case 'text':
+              let guild = client.guilds.get(i.guild.id)
+              return guild.channels.get(i.id).memberPermissions(guild.member(client.user.id)).has('READ_MESSAGE_HISTORY') && guild.channels.get(i.id).memberPermissions(guild.member(client.user.id)).has('READ_MESSAGES')
+            default:
+              return false
+          }
+        }).map(i => {
+          if (i.type === 'dm') {
+            places.directMessages.push({ name: `${i.recipient.username} (${i.recipient.id})`, value: `${i.type},${i.recipient.id}` })
+          } else if (i.type === 'text') {
+            if (guilds.indexOf(i.guild.id) === -1) {
+              places.guilds.push({ name: `(${i.guild.nameAcronym}) ${i.guild.name} (${i.guild.id})`, value: `${i.type},${i.guild.id}` })
+              guilds.push(i.guild.id)
+            }
+          } else if (i.type === 'group') {
+            places.groups.push({ name: `${i.name} (${i.id})`, value: `${i.type},${i.ownerID}` })
+          }
+        })
+        chooseChannels = {
+          type: 'checkbox',
+          name: 'chosenChannels',
+          choices: [],
+          message: 'Please choose what to archive (Multiple choices):\n',
+          validate: function (vals) {
+            if (vals.length < 1) {
+              return 'Choose at least one.'
+            }
+            return true
+          }
+        }
+        if (places.guilds.length > 0) {
+          chooseChannels.choices.push(new inquirer.Separator('= Guilds ='))
+          chooseChannels.choices.push({ name: 'ALL', checked: true, value: 'text,ALL' })
+          places.guilds.forEach(i => {
+            chooseChannels.choices.push(i)
+          })
+        }
+        if (places.groups.length > 0) {
+          chooseChannels.choices.push(new inquirer.Separator('= Groups ='))
+          chooseChannels.choices.push({ name: 'ALL', checked: true, value: 'group,ALL' })
+          places.groups.forEach(i => {
+            chooseChannels.choices.push(i)
+          })
+        }
+        if (places.directMessages.length > 0) {
+          chooseChannels.choices.push(new inquirer.Separator('= Direct messages ='))
+          chooseChannels.choices.push({ name: 'ALL', checked: true, value: 'dm,ALL' })
+          places.directMessages.forEach(i => {
+            chooseChannels.choices.push(i)
+          })
+        }
+      }
+      if (chooseChannels) questions.push(chooseChannels)
+      if (questions.length > 0) {
+        return prompt(questions)
+      } else {
+        // Initialize auto or single-use.
+        return false
+      }
+    }).then(answers => {
+      if (answers) {
+        if (typeof answers['tempDir'] === 'string') {
+          settings.archiving.tempDir = answers['tempDir'].length === 0
+            ? __dirname
+            : answers['tempDir'].trim()
+        }
+        if (typeof answers['archiveDir'] === 'string') {
+          settings.archiving.archiveDir = answers['archiveDir'].length === 0
+            ? __dirname
+            : answers['archiveDir'].trim()
+        }
+        if (typeof answers['cronSchedule'] === 'string') {
+          settings.archiving.auto.cronSchedule = answers['cronSchedule'].length === 0
+            ? '0 0 */1 * *'
+            : answers['cronSchedule'].trim()
+        }
+        if (answers['chosenChannels']) {
+          answers['chosenChannels'].forEach(i => {
+            let type = i.split(',')[0] === 'dm' ? 'DIRECTMESSAGES' : i.split(',')[0] === 'group' ? 'GROUPS' : 'GUILDS'
+            let id = i.split(',')[1]
+            settings.archiving[type].push(id)
+          })
+        }
+
+        // Validation passed.
+        if (answers['chosenChannels'] || answers.length > 0) {
+          return prompt({
+            type: 'confirm',
+            name: 'saveSettings',
+            message: 'Do you want to save your choices to settings.js?',
+            default: false
+          })
+        } else return false
+      } else {
+        return false
+      }
+    }).then(answers => {
+      // Validation passed.
+      if (answers) {
+        if (answers['saveSettings']) {
+          if (settings.debug) ui.log.write(`${gray('Debug:')} ${gray(bold('Creating backup file of existing settings file.'))}`)
+          fs.writeFileSync(path.join(__dirname, 'settings.js.bkp'), JSON.stringify(require('./settings.js'), null, 2))
+          if (settings.debug) ui.log.write(`${gray('Debug:')} ${gray(bold('Writing new data to settings file.'))}`)
+          fs.writeFileSync(path.join(__dirname, 'settings.js'), applyNewSettings())
+          // After that is complete, initialize auto or single-use.
+          return start()
+        } else return start()
+      } else {
+        // Just token was inputted, probably, initialize auto or single-use.
+        return start()
+      }
     })
   })
 })
