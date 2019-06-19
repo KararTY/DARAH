@@ -803,7 +803,7 @@ async function loadInstances (client, settings, logging, date) {
                           }
                         }
                       }
-                      msg.content = msg.content.replace(i, `<@${object[id].u.findIndex(c => c.i === mID)}>`)
+                      msg.content = msg.content.replace(i, `<@${object[id].u.findIndex(c => c.i === mID) || 'undefined-user'}>`)
                     })
                   }
                   // Edit message content to replace channel ids.
@@ -867,7 +867,7 @@ async function loadInstances (client, settings, logging, date) {
                           }))
                         }
                       }
-                      msg.content = msg.content.replace(i, `<:${emoji}:>`)
+                      msg.content = msg.content.replace(i, `<:${object[id].e.findIndex(e => e.i === mID) || 'undefined-emoji'}:>`)
                     })
                   }
                   // Edit message content to replace role ids.
