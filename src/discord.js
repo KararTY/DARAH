@@ -757,7 +757,7 @@ async function loadInstances (client, settings, logging, date) {
                   object[id].u[object[id].u.findIndex(c => c.i === mID)] = {
                     n: channelOptions.members.name ? theUser.username : undefined,
                     i: theUser.id, // Before appending to file, check options.
-                    tg: channelOptions.members.name ? theUser.username + '#' + theUser.discriminator : undefined,
+                    tg: channelOptions.members.name ? ((theUser.username && theUser.discriminator) ? (theUser.username + '#' + theUser.discriminator) : undefined) : undefined,
                     a: channelOptions.members.icon ? (theUser.displayAvatarURL || ((theUser.avatar && theUser.id) ? `https://cdn.discordapp.com/avatars/${theUser.id}/${theUser.avatar}.png` : undefined)) : theUser.defaultAvatarURL,
                     b: theUser.bot,
                     t: channelOptions.members.creationDate ? theUser.createdTimestamp : undefined,
