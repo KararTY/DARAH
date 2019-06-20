@@ -871,7 +871,7 @@ async function loadInstances (client, settings, logging, date) {
             msg.content.match(/<@&[0-9]+>/g).forEach(i => {
               let mID = i.replace(/[^0-9]/g, '')
               let firstRoleMention
-              if (object[id].r.findIndex(i => i.i === mID) === -1) {
+              if (object[id].r.findIndex(i => i.i === mID) === -1 && channelOptions.members.roles) {
                 let role = channel.guild.roles.get(mID)
                 if (role) {
                   firstRoleMention = {
@@ -1031,6 +1031,39 @@ async function loadInstances (client, settings, logging, date) {
         if (c.count && c.count.messages > 0) {
           let tempDir = path.join(settings.archiving.tempDir, 'DARAH_TEMP', c.type + i[0])
 
+          c.g.o = c.o.information.owner ? c.u.findIndex(u => c.g.o === u.i) : undefined
+
+          if (!c.o.channels.id) { // Get rid of ID.
+            for (let i = 0; i < c.c.length; i++) {
+              c.c[i].i = undefined
+            }
+            for (let i = 0; i < c.p.length; i++) {
+              c.p[i].i = undefined
+            }
+          }
+
+          if (!c.o.information.id || !c.o.information.name) { // Get rid of ID OR name.
+            for (let i = 0; i < c.r.length; i++) {
+              if (!c.o.information.id) c.r[i].i = undefined
+              if (!c.o.information.name) c.r[i].n = undefined
+            }
+          }
+
+          for (let i = 0; i < c.e.length; i++) {
+            if (c.e[i].retry) c.e[i].retry = undefined
+            if (!c.o.information.id) c.e[i].i = undefined
+            if (!c.o.information.id) c.e[i].d = undefined
+            if (!c.o.information.id) c.e[i].e = undefined
+          }
+
+          for (let i = 0; i < c.u.length; i++) {
+            if (c.u[i].retry) c.u[i].retry = undefined
+          }
+          if (!c.o.members.id) { // Get rid of ID.
+            for (let i = 0; i < c.u.length; i++) {
+              c.u[i].i = undefined
+            }
+          }
           // Dump object[string].ca into archive directory.
           fs.writeFileSync(path.join(c.directory, 'cache.json'), JSON.stringify(c.ca, null, c.o.output.formatted ? c.o.output.whiteSpace : 0))
           if (settings.debug) logging.ui.log.write(`${gray('Debug:')} ${gray(bold(`Updating cache file for ${i[0]}.`))}`)
@@ -1042,46 +1075,19 @@ async function loadInstances (client, settings, logging, date) {
           }
 
           // Dump object[string].c into file.
-          if (!c.o.channels.id) { // Get rid of ID.
-            for (let i = 0; i < c.c.length; i++) {
-              c.c[i].i = undefined
-            }
-            for (let i = 0; i < c.p.length; i++) {
-              c.p[i].i = undefined
-            }
-          }
+
           fs.writeFileSync(path.join(tempDir, '[INFO]channels.json'), JSON.stringify({ c: c.c, p: c.p }, null, c.o.output.formatted ? c.o.output.whiteSpace : 0))
           if (settings.debug) logging.ui.log.write(`${gray('Debug:')} ${gray(bold(`Appending channels file for ${i[0]}.`))}`)
 
-          if (!c.o.information.id || !c.o.information.name) { // Get rid of ID OR name.
-            for (let i = 0; i < c.e.length; i++) {
-              if (!c.o.information.id) c.r[i].i = undefined
-              if (!c.o.information.name) c.r[i].n = undefined
-            }
-          }
           // Dump object[string].r into file.
           fs.writeFileSync(path.join(tempDir, '[INFO]roles.json'), JSON.stringify(c.r, null, c.o.output.formatted ? c.o.output.whiteSpace : 0))
           if (settings.debug) logging.ui.log.write(`${gray('Debug:')} ${gray(bold(`Appending roles file for ${i[0]}.`))}`)
 
-          for (let i = 0; i < c.e.length; i++) {
-            if (c.e[i].retry) c.e[i].retry = undefined
-          }
-
-          if (!c.o.information.id) { // Get rid of ID.
-            for (let i = 0; i < c.e.length; i++) {
-              if (!c.o.information.id) c.e[i].i = undefined
-              if (!c.o.information.id) c.e[i].d = undefined
-              if (!c.o.information.id) c.e[i].e = undefined
-            }
-          }
           // Dump object[string].e into file.
           fs.writeFileSync(path.join(tempDir, '[INFO]emojis.json'), JSON.stringify(c.e, null, c.o.output.formatted ? c.o.output.whiteSpace : 0))
           if (settings.debug) logging.ui.log.write(`${gray('Debug:')} ${gray(bold(`Appending emojis file for ${i[0]}.`))}`)
 
           // Dump object[string].g into file.
-          if (!c.o.information.owner) {
-            c.g.o = c.c.findIndex(i => c.g.o === i.i)
-          }
           c.g._app = 'D.A.R.A.H, formerly S.A.R.A.H, app by KararTY & Tonkku107 <https://github.com/kararty/discordautorecordarchiverheroine>'
           c.g._disclaimer = 'PLEASE NOTE THIS ARCHIVE MAY, AND CAN, CONTAIN ERRONEOUS AND/OR MODIFIED/EDITED INFORMATION.'
           /* KararTY's note: It is on the person taking the archive to prove that their archive doesn't contain any modified/edited information.
@@ -1089,14 +1095,6 @@ async function loadInstances (client, settings, logging, date) {
           fs.writeFileSync(path.join(tempDir, `[INFORMATION]${c.o.information.name ? c.g.n : '-'}(${c.o.information.id ? c.g.i : '-'}).json`), JSON.stringify(c.g, null, c.o.output.formatted ? c.o.output.whiteSpace : 0))
           if (settings.debug) logging.ui.log.write(`${gray('Debug:')} ${gray(bold(`Appending info file for ${i[0]}.`))}`)
 
-          for (let i = 0; i < c.u.length; i++) {
-            if (c.u[i].retry) c.u[i].retry = undefined
-          }
-          if (!c.o.members.id) { // Get rid of ID.
-            for (let i = 0; i < c.u.length; i++) {
-              c.u[i].i = undefined
-            }
-          }
           // Dump object[string].u into file.
           fs.writeFileSync(path.join(tempDir, '[INFO]users.json'), JSON.stringify(c.u, null, c.o.output.formatted ? c.o.output.whiteSpace : 0))
           if (settings.debug) logging.ui.log.write(`${gray('Debug:')} ${gray(bold(`Appending users file for ${i[0]}.`))}`)
