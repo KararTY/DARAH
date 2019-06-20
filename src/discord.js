@@ -799,7 +799,7 @@ async function loadInstances (client, settings, logging, date) {
                   }
                 }
               }
-              msg.content = msg.content.replace(i, `<@${object[id].u.findIndex(c => c.i === mID) || 'undefined-user'}>`)
+              msg.content = msg.content.replace(i, `<@${typeof object[id].u.findIndex(c => c.i === mID) === 'number' ? object[id].u.findIndex(c => c.i === mID) : 'undefined-user'}>`)
             })
           }
           // Edit message content to replace channel ids.
@@ -807,7 +807,7 @@ async function loadInstances (client, settings, logging, date) {
             msg.content.match(/<#[0-9]+>/g).forEach(i => {
               let mID = i.replace(/[^0-9]/g, '')
               let channel = object[id].c.findIndex(c => c.i === mID) > -1 ? object[id].c.findIndex(c => c.i === mID) : undefined
-              msg.content = msg.content.replace(i, `<#${channel || 'undefined-channel'}>`)
+              msg.content = msg.content.replace(i, `<#${typeof channel === 'number' ? channel : 'undefined-channel'}>`)
             })
           }
           // Edit message content to replace emojis.
@@ -863,7 +863,7 @@ async function loadInstances (client, settings, logging, date) {
                   }))
                 }
               }
-              msg.content = msg.content.replace(i, `<:${object[id].e.findIndex(e => e.i === mID) || 'undefined-emoji'}:>`)
+              msg.content = msg.content.replace(i, `<:${typeof object[id].e.findIndex(e => e.i === mID) === 'number' ? object[id].e.findIndex(e => e.i === mID) : 'undefined-emoji'}:>`)
             })
           }
           // Edit message content to replace role ids.
@@ -873,7 +873,6 @@ async function loadInstances (client, settings, logging, date) {
               let firstRoleMention
               if (object[id].r.findIndex(i => i.i === mID) === -1) {
                 let role = channel.guild.roles.get(mID)
-                logging.ui.log.write(`${red('DEBUG:')} ${gray(bold(`${channel} | ${role} | ${msg.content}`))}`)
                 if (role) {
                   firstRoleMention = {
                     po: role.calculatedPosition,
@@ -894,7 +893,7 @@ async function loadInstances (client, settings, logging, date) {
                 }
                 object[id].r.push(firstRoleMention)
               }
-              msg.content = msg.content.replace(i, `<&${object[id].r.findIndex(r => r.i === mID) || 'undefined-role'}>`)
+              msg.content = msg.content.replace(i, `<&${typeof object[id].r.findIndex(r => r.i === mID) === 'number' ? object[id].r.findIndex(r => r.i === mID) : 'undefined-role'}>`)
             })
           }
           return { attachments, embeds, reactions, firstUserMention, edits, msg }
