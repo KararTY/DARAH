@@ -22,13 +22,15 @@ module.exports = {
         id: true,
         name: true,
         topic: true,
-        voice: true
+        voice: true,
+        creationDate: true
       },
       messages: {
         id: true,
         attachments: true,
         embeds: true,
-        reactions: true
+        reactions: true,
+        creationDate: true
       },
       members: {
         name: true,
@@ -46,7 +48,8 @@ module.exports = {
         emojis: true,
         roles: true,
         channels: true,
-        users: true
+        users: true,
+        creationDate: true
       },
       downloads: {
         icons: true,

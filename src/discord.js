@@ -170,7 +170,7 @@ async function loadInstances (client, settings, logging, date) {
                 if (channel.parent) {
                   parentChannelObject = {
                     i: channel.parent.id,
-                    n: channel.parent.name,
+                    n: channelOptions.channels.name ? channel.parent.name : undefined,
                     po: channel.parent.calculatedPosition
                   }
                   if (object[id].p.findIndex(i => i.i === parentChannelObject.i) > -1) object[id].p[object[id].p.findIndex(i => i.i === parentChannelObject.i)] = parentChannelObject
@@ -178,10 +178,10 @@ async function loadInstances (client, settings, logging, date) {
                 }
                 object[id].c.push({
                   i: channelOptions.channels.id ? channel.id : undefined,
-                  n: channel.name || channel.owner.username || channel.recipient.username || undefined,
+                  n: channelOptions.channels.name ? (channel.name || channel.owner.username || channel.recipient.username || undefined) : undefined,
                   ty: channel.type || undefined,
                   po: typeof channel.calculatedPosition === 'number' ? channel.calculatedPosition : undefined,
-                  t: channel.createdTimestamp || undefined,
+                  t: channelOptions.channels.creationDate ? channel.createdTimestamp || undefined : undefined,
                   bit: channel.bitrate || undefined, // Voice channel bitrate.
                   lim: channel.limit === 0 ? undefined : channel.limit,
                   pa: channel.parent ? object[id].p.findIndex(i => i.i === parentChannelObject.i) : undefined,
@@ -194,7 +194,7 @@ async function loadInstances (client, settings, logging, date) {
               if (channel.parent) {
                 parentChannelObject = {
                   i: channel.parent.id,
-                  n: channel.parent.name,
+                  n: channelOptions.channels.name ? channel.parent.name : undefined,
                   po: channel.parent.calculatedPosition
                 }
                 if (object[id].p.findIndex(i => i.i === parentChannelObject.i) > -1) object[id].p[object[id].p.findIndex(i => i.i === parentChannelObject.i)] = parentChannelObject
@@ -206,7 +206,7 @@ async function loadInstances (client, settings, logging, date) {
                 ty: channel.type || undefined,
                 po: typeof channel.calculatedPosition === 'number' ? channel.calculatedPosition : undefined,
                 to: channelOptions.channels.topic ? (channel.topic || undefined) : undefined,
-                t: channel.createdTimestamp || undefined,
+                t: channelOptions.channels.creationDate ? channel.createdTimestamp || undefined : undefined,
                 pa: channel.parent ? object[id].p.findIndex(i => i.i === parentChannelObject.i) : undefined,
                 nsfw: channel.nsfw || undefined,
                 rlpu: channel.rateLimitPerUser || undefined
@@ -220,10 +220,10 @@ async function loadInstances (client, settings, logging, date) {
               guild.emojis.forEach(item => {
                 let availableForRoles = []
                 if (channelOptions.information.roles) {
-                  item.roles.forEach(roles => {
+                  item.roles.forEach(role => {
                     availableForRoles.push({
-                      n: roles.name,
-                      i: roles.id
+                      i: channelOptions.information.id ? role.id : undefined,
+                      po: role.calculatedPosition
                     })
                   })
                 }
@@ -282,7 +282,7 @@ async function loadInstances (client, settings, logging, date) {
               u: channelOptions.information.icon ? (guild.iconURL || undefined) : undefined,
               l: guild.large,
               m: guild.memberCount,
-              t: guild.createdTimestamp,
+              t: channelOptions.information.creationDate ? guild.createdTimestamp : undefined,
               af: {
                 e: !!guild.afkChannel,
                 i: guild.afkChannelId,
@@ -383,7 +383,7 @@ async function loadInstances (client, settings, logging, date) {
               u: channel.iconURL ? channel.iconURL : channel.me ? undefined : channel.recipient.displayAvatarURL,
               m: channel.recipients ? channel.recipients.size : undefined,
               mn: nicks,
-              t: channel.createdTimestamp,
+              t: channelOptions.information.creationDate ? channel.createdTimestamp : undefined,
               o: channel.recipient.id,
               _at: {
                 t: date,
@@ -448,7 +448,7 @@ async function loadInstances (client, settings, logging, date) {
               u: channelOptions.information.icon ? channel.iconURL ? channel.iconURL : channel.me ? undefined : channel.recipient.displayAvatarURL : undefined,
               m: channel.recipients ? channel.recipients.size : undefined,
               mn: nicks,
-              t: channel.createdTimestamp,
+              t: channelOptions.information.creationDate ? channel.createdTimestamp : undefined,
               o: channel.ownerID, // Before appending to file, check options.
               _at: {
                 t: date,
@@ -487,7 +487,7 @@ async function loadInstances (client, settings, logging, date) {
         if (channel.parent) {
           parentChannelObject = {
             i: channel.parent.id,
-            n: channel.parent.name,
+            n: channelOptions.channels.name ? channel.parent.name : undefined,
             po: channel.parent.calculatedPosition
           }
           if (object[id].p.findIndex(i => i.i === parentChannelObject.i) > -1) object[id].p[object[id].p.findIndex(i => i.i === parentChannelObject.i)] = parentChannelObject
@@ -499,7 +499,7 @@ async function loadInstances (client, settings, logging, date) {
           ty: channel.type || undefined,
           po: typeof channel.calculatedPosition === 'number' ? channel.calculatedPosition : undefined,
           to: channelOptions.channels.topic ? (channel.topic || undefined) : undefined,
-          t: channel.createdTimestamp || undefined,
+          t: channelOptions.channels.creationDate ? channel.createdTimestamp || undefined : undefined,
           pa: channel.parent ? object[id].p.findIndex(i => i.i === parentChannelObject.i) : undefined,
           p: permissionOverwrites.length > 0 ? permissionOverwrites : undefined,
           nsfw: channel.nsfw || undefined,
@@ -664,9 +664,9 @@ async function loadInstances (client, settings, logging, date) {
                 if (object[id].r.findIndex(i => i.i === role.id) === -1) {
                   firstRoleMention = {
                     po: role.calculatedPosition,
-                    n: role.name,
+                    n: channelOptions.information.name ? role.name : undefined,
                     i: role.id,
-                    t: role.createdTimestamp,
+                    t: channelOptions.information.creationDate ? role.createdTimestamp : undefined,
                     c: role.hexColor,
                     h: role.hoist,
                     m: role.members.size,
@@ -878,7 +878,7 @@ async function loadInstances (client, settings, logging, date) {
                     po: role.calculatedPosition,
                     n: role.name,
                     i: role.id,
-                    t: role.createdTimestamp,
+                    t: channelOptions.information.creationDate ? role.createdTimestamp : undefined,
                     c: role.hexColor,
                     h: role.hoist,
                     m: role.members.size,
@@ -920,7 +920,7 @@ async function loadInstances (client, settings, logging, date) {
                       e: editedMessage.embeds,
                       r: editedMessage.reactions
                     },
-                    t: msg.createdTimestamp,
+                    t: channelOptions.messages.creationDate ? msg.createdTimestamp : undefined,
                     p: msg.pinned ? true : undefined,
                     e: msg.editedTimestamp ? msg.editedTimestamp : undefined,
                     n: msg.nonce, // Might be a completely useless field.
@@ -1053,6 +1053,12 @@ async function loadInstances (client, settings, logging, date) {
           fs.writeFileSync(path.join(tempDir, '[INFO]channels.json'), JSON.stringify({ c: c.c, p: c.p }, null, c.o.output.formatted ? c.o.output.whiteSpace : 0))
           if (settings.debug) logging.ui.log.write(`${gray('Debug:')} ${gray(bold(`Appending channels file for ${i[0]}.`))}`)
 
+          if (!c.o.information.id || !c.o.information.name) { // Get rid of ID OR name.
+            for (let i = 0; i < c.e.length; i++) {
+              if (!c.o.information.id) c.r[i].i = undefined
+              if (!c.o.information.name) c.r[i].n = undefined
+            }
+          }
           // Dump object[string].r into file.
           fs.writeFileSync(path.join(tempDir, '[INFO]roles.json'), JSON.stringify(c.r, null, c.o.output.formatted ? c.o.output.whiteSpace : 0))
           if (settings.debug) logging.ui.log.write(`${gray('Debug:')} ${gray(bold(`Appending roles file for ${i[0]}.`))}`)
@@ -1061,6 +1067,13 @@ async function loadInstances (client, settings, logging, date) {
             if (c.e[i].retry) c.e[i].retry = undefined
           }
 
+          if (!c.o.information.id) { // Get rid of ID.
+            for (let i = 0; i < c.e.length; i++) {
+              if (!c.o.information.id) c.e[i].i = undefined
+              if (!c.o.information.id) c.e[i].d = undefined
+              if (!c.o.information.id) c.e[i].e = undefined
+            }
+          }
           // Dump object[string].e into file.
           fs.writeFileSync(path.join(tempDir, '[INFO]emojis.json'), JSON.stringify(c.e, null, c.o.output.formatted ? c.o.output.whiteSpace : 0))
           if (settings.debug) logging.ui.log.write(`${gray('Debug:')} ${gray(bold(`Appending emojis file for ${i[0]}.`))}`)
@@ -1069,11 +1082,11 @@ async function loadInstances (client, settings, logging, date) {
           if (!c.o.information.owner) {
             c.g.o = c.c.findIndex(i => c.g.o === i.i)
           }
-          c.g._app = 'D.A.R.A.H, formerly S.A.R.A.H, app by KararTY & Tonkku107 <https://github.com/kararty/serverautorecordarchiverheroine>'
+          c.g._app = 'D.A.R.A.H, formerly S.A.R.A.H, app by KararTY & Tonkku107 <https://github.com/kararty/discordautorecordarchiverheroine>'
           c.g._disclaimer = 'PLEASE NOTE THIS ARCHIVE MAY, AND CAN, CONTAIN ERRONEOUS AND/OR MODIFIED/EDITED INFORMATION.'
           /* KararTY's note: It is on the person taking the archive to prove that their archive doesn't contain any modified/edited information.
           This/These script(s), and its coder(s), is/are not responsible for any erroneous and/or modified/edited information in any of the archives. */
-          fs.writeFileSync(path.join(tempDir, `[INFORMATION]${c.o.information.name ? c.g.n : '?'}(${c.o.information.id ? c.g.i : '?'}).json`), JSON.stringify(c.g, null, c.o.output.formatted ? c.o.output.whiteSpace : 0))
+          fs.writeFileSync(path.join(tempDir, `[INFORMATION]${c.o.information.name ? c.g.n : '-'}(${c.o.information.id ? c.g.i : '-'}).json`), JSON.stringify(c.g, null, c.o.output.formatted ? c.o.output.whiteSpace : 0))
           if (settings.debug) logging.ui.log.write(`${gray('Debug:')} ${gray(bold(`Appending info file for ${i[0]}.`))}`)
 
           for (let i = 0; i < c.u.length; i++) {
