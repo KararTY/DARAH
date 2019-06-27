@@ -181,7 +181,7 @@ async function loadInstances (client, settings, logging, date) {
                   n: channelOptions.channels.name ? (channel.name || channel.owner.username || channel.recipient.username || undefined) : undefined,
                   ty: channel.type || undefined,
                   po: typeof channel.calculatedPosition === 'number' ? channel.calculatedPosition : undefined,
-                  t: channelOptions.channels.creationDate ? channel.createdTimestamp || undefined : undefined,
+                  t: channelOptions.channels.creationDate ? channel.createdTimestamp : undefined,
                   bit: channel.bitrate || undefined, // Voice channel bitrate.
                   lim: channel.limit === 0 ? undefined : channel.limit,
                   pa: channel.parent ? object[id].p.findIndex(i => i.i === parentChannelObject.i) : undefined,
@@ -206,7 +206,7 @@ async function loadInstances (client, settings, logging, date) {
                 ty: channel.type || undefined,
                 po: typeof channel.calculatedPosition === 'number' ? channel.calculatedPosition : undefined,
                 to: channelOptions.channels.topic ? (channel.topic || undefined) : undefined,
-                t: channelOptions.channels.creationDate ? channel.createdTimestamp || undefined : undefined,
+                t: channelOptions.channels.creationDate ? channel.createdTimestamp : undefined,
                 pa: channel.parent ? object[id].p.findIndex(i => i.i === parentChannelObject.i) : undefined,
                 nsfw: channel.nsfw || undefined,
                 rlpu: channel.rateLimitPerUser || undefined
@@ -499,7 +499,7 @@ async function loadInstances (client, settings, logging, date) {
           ty: channel.type || undefined,
           po: typeof channel.calculatedPosition === 'number' ? channel.calculatedPosition : undefined,
           to: channelOptions.channels.topic ? (channel.topic || undefined) : undefined,
-          t: channelOptions.channels.creationDate ? channel.createdTimestamp || undefined : undefined,
+          t: channelOptions.channels.creationDate ? channel.createdTimestamp : undefined,
           pa: channel.parent ? object[id].p.findIndex(i => i.i === parentChannelObject.i) : undefined,
           p: permissionOverwrites.length > 0 ? permissionOverwrites : undefined,
           nsfw: channel.nsfw || undefined,
@@ -608,7 +608,7 @@ async function loadInstances (client, settings, logging, date) {
                   e: reaction.emoji.toString(),
                   c: reaction.emoji.requiresColons || undefined,
                   a: reaction.emoji.animated ? true : undefined,
-                  t: reaction.emoji.createdTimestamp ? reaction.emoji.createdTimestamp : undefined,
+                  t: channelOptions.information.creationDate ? (reaction.emoji.createdTimestamp ? reaction.emoji.createdTimestamp : undefined) : undefined,
                   m: reaction.emoji.managed ? true : undefined,
                   u: channelOptions.information.emojis ? reaction.emoji.url ? reaction.emoji.url : reaction.emoji.id ? `https://cdn.discordapp.com/emojis/${reaction.emoji.id}.${reaction.emoji.animated ? 'gif' : 'png'}` : undefined : undefined
                 }
