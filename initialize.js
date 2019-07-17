@@ -201,7 +201,7 @@ prompt({
 }).then(answer => {
   if (answer['acceptTOS'] === 'No') {
     ui.log.write(`${redBright('Warning:')} ${redBright(bold('ToS not accepted, please delete script.'))}`)
-    process.exit(0)
+    process.exit()
   }
 
   let prom = []
@@ -367,7 +367,7 @@ function start () {
         }, new Date(cronParser.parseExpression(settings.archiving.auto.cronSchedule).next()) - Date.now())
       } else {
         ui.updateBottomBar(`${green(bold(`Thank you for using DARAH.`))}`)
-        process.exit(0)
+        process.exit()
       }
     })
   }, settings.archiving.auto.enabled ? new Date(cronParser.parseExpression(settings.archiving.auto.cronSchedule).next()) - Date.now() : 0)

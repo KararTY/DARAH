@@ -1,6 +1,11 @@
 # D.A.R.A.H. - Discord Auto Record Archiver Heroine
 ## Archive ALL Discord messages in a guild.
 
+<p align="center">
+  <img height="500" src="https://i.imgur.com/UssJXME.png">
+  <br>Archiving with downloads enabled.
+</p>
+
 ### [What do the outputted fields stand for?](/fields.md)
 
 ### [Want to view your archives? Click here for D.A.R.A.H. Viewer!](https://github.com/kararty/darah-viewer)
