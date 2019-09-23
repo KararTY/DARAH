@@ -3,131 +3,66 @@
  * Initialization is easy, validate settings file and request more information if insufficient.
  */
 
-const settings = require('./settings.js')
-
-const discord = require('./src/discord.js')
-
-const applyNewSettings = () => {
-  return `module.exports = {
-  authentication: {
-    discord: {
-      token: '${settings.authentication.discord.token}'
-    }
+const {
+  colors: {
+    red,
+    green,
+    gray,
+    bold,
+    underline,
+    blue
   },
-  archiving: {
-    GUILDS: [${settings.archiving.GUILDS.length > 0 ? settings.archiving.GUILDS.map(i => `'${i}'`).join(', ') : ``}], // Guild ids. Use 'ALL' for all.
-    GROUPS: [${settings.archiving.GROUPS.length > 0 ? settings.archiving.GROUPS.map(i => `'${i}'`).join(', ') : ``}], // Owner user id. Use 'ALL' for all.
-    DIRECTMESSAGES: [${settings.archiving.DIRECTMESSAGES.length > 0 ? settings.archiving.DIRECTMESSAGES.map(i => `'${i}'`).join(', ') : ``}], // User ids. Use 'ALL' for all.
-    tempDir: '${JSON.stringify(settings.archiving.tempDir)}', // Put temp directory here. (__dirname)
-    archiveDir: '${JSON.stringify(settings.archiving.archiveDir)}', // Put archive directory here. (__dirname)
-    auto: {
-      enabled: ${settings.archiving.auto.enabled},
-      cronSchedule: '${settings.archiving.auto.cronSchedule}' // This example cron schedule ('0 0 */1 * *') will run archiver every midnight (00:00).
-    },
-    overrule: ${settings.archiving.overrule}, // Use this to overrule all available custom guild archive options with the one below.
-    defaultOptions: {
-      fullArchive: ${settings.archiving.defaultOptions.fullArchive}, // Archives everything from the beginning if enabled.
-      everyMessages: ${settings.archiving.defaultOptions.everyMessages}, // Create new file every X messages.
-      channels: {
-        id: ${settings.archiving.defaultOptions.channels.id},
-        name: ${settings.archiving.defaultOptions.channels.name},
-        topic: ${settings.archiving.defaultOptions.channels.topic},
-        voice: ${settings.archiving.defaultOptions.channels.voice}
-      },
-      messages: {
-        id: ${settings.archiving.defaultOptions.messages.id},
-        attachments: ${settings.archiving.defaultOptions.messages.attachments},
-        embeds: ${settings.archiving.defaultOptions.messages.embeds},
-        reactions: ${settings.archiving.defaultOptions.messages.reactions}
-      },
-      members: {
-        name: ${settings.archiving.defaultOptions.members.name},
-        id: ${settings.archiving.defaultOptions.members.id},
-        creationDate: ${settings.archiving.defaultOptions.members.creationDate},
-        joinDate: ${settings.archiving.defaultOptions.members.joinDate},
-        roles: ${settings.archiving.defaultOptions.members.roles},
-        icon: ${settings.archiving.defaultOptions.members.icon}
-      },
-      information: {
-        id: ${settings.archiving.defaultOptions.information.id},
-        name: ${settings.archiving.defaultOptions.information.name},
-        icon: ${settings.archiving.defaultOptions.information.icon},
-        owner: ${settings.archiving.defaultOptions.information.owner},
-        emojis: ${settings.archiving.defaultOptions.information.emojis},
-        roles: ${settings.archiving.defaultOptions.information.roles},
-        channels: ${settings.archiving.defaultOptions.information.channels},
-        users: ${settings.archiving.defaultOptions.information.users}
-      },
-      downloads: {
-        icons: ${settings.archiving.defaultOptions.downloads.icons},
-        images: ${settings.archiving.defaultOptions.downloads.images},
-        emojis: ${settings.archiving.defaultOptions.downloads.emojis},
-        videos: ${settings.archiving.defaultOptions.downloads.videos},
-        audios: ${settings.archiving.defaultOptions.downloads.audios},
-        texts: ${settings.archiving.defaultOptions.downloads.texts},
-        misc: ${settings.archiving.defaultOptions.downloads.misc}
-      },
-      trackAndArchiveDeletedMessages: ${settings.archiving.defaultOptions.trackAndArchiveDeletedMessages}, // Only works when auto is enabled.
-      output: {
-        appendWhoArchived: ${settings.archiving.defaultOptions.output.appendWhoArchived},
-        formatted: ${settings.archiving.defaultOptions.output.formatted},
-        whiteSpace: ${settings.archiving.defaultOptions.output.whiteSpace}
-      }
-    }
+  settings: {
+    current: settings,
+    saveSettings
   },
-  debug: ${settings.debug}
-}
-`
-}
+  rx: {
+    Subject
+  },
+  discord,
+  fs,
+  writeFile,
+  os,
+  path,
+  cli,
+  cronParser,
+  rimraf,
+  fetch
+} = require('./dependencies')
 
-const fs = require('fs')
-const path = require('path')
-const os = require('os')
+const archive = require('./src/discord.js')
 
-const { Client } = require('discord.js')
-const client = new Client()
+const ui = new cli.ui.BottomBar()
+const prompts = new Subject()
 
-let loginFailed
-
-const inquirer = require('inquirer')
-const prompt = inquirer.createPromptModule()
-const { red, green, gray, bold, underline, redBright, blue } = require('colorette')
-
-const ui = new inquirer.ui.BottomBar()
-
-const cronParser = require('cron-parser')
-
-// Validation
-// TODO: Validate pastebin details.
-let loginQuestion = {
-  type: 'password',
-  name: 'discordToken',
-  mask: '*',
-  message: 'Please enter your Discord Authentication token:\n',
-  validate: function (val) {
-    val = val.trim().replace(/[ ]+/g, '')
-    if (val.length === 0) {
-      ui.log.write(`${red('Error:')} ${red(bold(`Given token length is ${val.length}, must be longer.`))}`)
-      return 'Invalid token length. Try again.'
-    }
-    ui.updateBottomBar('Please wait...')
-    let done = this.async()
-
-    client.once('ready', () => {
-      ui.log.write(`${green('Log:')} ${green(bold('Successfully authorized on Discord.'))}`)
-      if (!loginFailed) ui.log.write(`${green('Log:')} ${green(bold(`Make it easier for yourself, enter Discord Authorization token in the 'settings.js' file next time!`))}`)
-      else ui.log.write(`${redBright('Warning:')} ${redBright(bold(`Please correctly enter your Discord Authorization token in the 'settings.js' file next time!`))}`)
-      done(null, true)
-    }).login(val).catch(e => {
-      if (settings.debug) console.error(e)
-      ui.log.write(`${red('Error:')} ${red(bold(e.message))}`)
-      client.removeAllListeners('ready')
-      done('Could not use that token, try again.')
-    })
+cli.prompt(prompts).ui.process.subscribe({
+  next: onAnswer,
+  error: (err) => {
+    console.error(err)
+    process.exit()
   }
-}
-let questions = [
-  (settings.archiving.archiveDir.length === 0 || !fs.existsSync(path.join(settings.archiving.archiveDir)) || fs.accessSync(path.join(settings.archiving.archiveDir), fs.constants.R_OK | fs.constants.W_OK) !== undefined) ? {
+})
+
+const questions = {
+  firstStart: {
+    type: 'list',
+    name: 'acceptTOS',
+    message: `Have you read and accepted Discord's Developer Terms of Service?\n${blue(underline('https://discordapp.com/developers/docs/legal'))}\nDo you understand that you have to take all\nresponsibility for any and all consequences as a\nresult of running this script?\n`,
+    choices: ['Yes', 'No']
+  },
+  loginQuestion: {
+    type: 'password',
+    name: 'authToken',
+    mask: '*',
+    message: 'Please enter your Discord Authentication token:\n',
+    validate: (val) => {
+      val = val.trim().replace(/[ ]+/g, '')
+      if (val.length === 0) {
+        throw new Error('Invalid token length. Try again.')
+      } else return true
+    }
+  },
+  inputDirectory: {
     type: 'input',
     name: 'archiveDir',
     message: `Please enter archive directory or leave empty to use default ${gray(underline(__dirname))}:\n`,
@@ -145,8 +80,8 @@ let questions = [
         return 'Error. Try again.'
       }
     }
-  } : false,
-  (settings.archiving.archiveDir.length === 0 || !fs.existsSync(path.join(settings.archiving.tempDir)) || fs.accessSync(path.join(settings.archiving.tempDir), fs.constants.R_OK | fs.constants.W_OK) !== undefined) ? {
+  },
+  temporaryDirectory: {
     type: 'input',
     name: 'tempDir',
     message: `Please enter cache directory or leave empty to use default ${gray(underline(__dirname))}:\n`,
@@ -164,12 +99,55 @@ let questions = [
         return 'Error. Try again.'
       }
     }
-  } : false
-].filter(Boolean)
+  },
+  cronSchedule: {
+    type: 'input',
+    name: 'cronSchedule',
+    message: `Please enter new cron job schedule string or leave empty to use default ${gray(underline('0 0 */1 * *'))}:\n`,
+    validate: function (val) {
+      val = val.trim()
+      if (val.length === 0) return true
+      try {
+        cronParser.parseExpression(val)
+        return true
+      } catch (e) {
+        if (settings.debug) console.error(e)
+        ui.log.write(`${red('Error:')} ${red(bold(e.message))}`)
+        return 'Error. Try again.'
+      }
+    }
+  },
+  saveToFile: {
+    type: 'confirm',
+    name: 'saveSettings',
+    message: 'Do you want to save your choices to settings.js?',
+    default: false
+  }
+}
+
+function attemptLogin (answer) {
+  ui.log.write('Attempting to authenticate...')
+  discord.once('ready', () => {
+    ui.log.write(green(`Success: ${bold('Discord account authenticated.')}`))
+    if (settings.archiving.archiveDir.length === 0 || !fs.existsSync(path.join(settings.archiving.archiveDir)) || fs.accessSync(path.join(settings.archiving.archiveDir), fs.constants.R_OK | fs.constants.W_OK) !== undefined) prompts.next(questions.inputDirectory)
+    else if (settings.archiving.tempDir.length === 0 || !fs.existsSync(path.join(settings.archiving.tempDir)) || fs.accessSync(path.join(settings.archiving.tempDir), fs.constants.R_OK | fs.constants.W_OK) !== undefined) prompts.next(questions.temporaryDirectory)
+    else listGuildsPrompt()
+  }).login(answer).catch((e) => {
+    if (settings.debug) console.error(e)
+    ui.log.write(red(`Error: ${bold(e.message)}`))
+    discord.removeAllListeners('ready')
+    prompts.next(questions.loginQuestion)
+  })
+}
 
 if (settings.archiving.auto.enabled) {
+  // if (typeof answers.cronSchedule === 'string') {
+  //   settings.archiving.auto.cronSchedule = answers.cronSchedule.length === 0
+  //     ? '0 0 */1 * *'
+  //     : answers.cronSchedule.trim()
+  // }
   try {
-    let testingDate = cronParser.parseExpression(settings.archiving.auto.cronSchedule)
+    const testingDate = cronParser.parseExpression(settings.archiving.auto.cronSchedule)
     ui.log.write(`${green('Log:')} ${green(bold('Auto archiving enabled && CRON schedule string succesfully validated.'))} ${gray(`Archives at\n${testingDate.next().toString()},\n${testingDate.next().toString()},\n${testingDate.next().toString()}\n... etc.`)}`)
   } catch (e) {
     if (settings.debug) console.error(e)
@@ -192,181 +170,236 @@ if (settings.archiving.auto.enabled) {
       }
     })
   }
+} else prompts.next(questions.firstStart)
+
+function listGuildsPrompt () {
+  const prompt = {
+    type: 'checkbox',
+    name: 'choosenGuilds',
+    choices: [],
+    message: 'Please choose guilds, DMs and groups to archive (Multiple choices):\n',
+    validate: function (vals) {
+      if (vals.length < 1) {
+        return 'Choose at least one.'
+      }
+      return true
+    }
+  }
+
+  const places = {
+    guilds: [],
+    directMessages: [],
+    groups: []
+  }
+
+  discord.channels.forEach(i => {
+    switch (i.type) {
+      case 'text': {
+        const guild = discord.guilds.get(i.guild.id)
+        if (guild.channels.get(i.id).memberPermissions(guild.member(discord.user.id)).has('READ_MESSAGE_HISTORY') && guild.channels.get(i.id).memberPermissions(guild.member(discord.user.id)).has('READ_MESSAGES')) {
+          if (!places.guilds.find(g => g.value.id === i.guild.id)) {
+            places.guilds.push({ name: `${i.guild.name} (${i.guild.id})`, checked: !!settings.archiving.GUILDS[i.guild.id], value: { type: 'guild', id: i.guild.id } })
+          }
+        }
+        break
+      }
+      case 'group':
+        places.groups.push({ name: `${i.name || i.owner.username} (${i.id})`, checked: settings.archiving.GROUPS.indexOf(i.id) > -1, value: { type: 'group', id: i.id } })
+        break
+      case 'dm':
+        places.directMessages.push({ name: `${i.recipient.username} (${i.recipient.id})`, checked: settings.archiving.DIRECTMESSAGES.indexOf(i.id) > -1, value: { type: 'dm', id: i.id } })
+        break
+    }
+  })
+
+  if (places.guilds.length > 0) {
+    prompt.choices.push(new cli.Separator('= Guilds ='))
+    prompt.choices.push({ name: 'ALL GUILDS', value: { type: 'guild', all: true, id: places.guilds.map(guild => guild.value.id) } })
+    places.guilds.forEach(i => {
+      prompt.choices.push(i)
+    })
+  }
+
+  if (places.groups.length > 0) {
+    prompt.choices.push(new cli.Separator('= Groups ='))
+    prompt.choices.push({ name: 'ALL GROUPS', value: { type: 'group', id: places.groups.map(group => group.value.id) } })
+    places.groups.forEach(i => {
+      prompt.choices.push(i)
+    })
+  }
+
+  if (places.directMessages.length > 0) {
+    prompt.choices.push(new cli.Separator('= Direct messages ='))
+    prompt.choices.push({ name: 'ALL DMs', value: { type: 'dm', id: places.directMessages.map(dm => dm.value.id) } })
+    places.directMessages.forEach(i => {
+      prompt.choices.push(i)
+    })
+  }
+
+  return prompts.next(prompt)
 }
-prompt({
-  type: 'list',
-  name: 'acceptTOS',
-  message: `Have you read and accepted Discord's Developer Terms of Service?\n${blue(underline('https://discordapp.com/developers/docs/legal'))}\nDo you understand that you have to take all\nresponsibility for any and all consequences as a\nresult of running this script?\n`,
-  choices: ['Yes', 'No']
-}).then(answer => {
-  if (answer['acceptTOS'] === 'No') {
-    ui.log.write(`${redBright('Warning:')} ${redBright(bold('ToS not accepted, please delete script.'))}`)
-    process.exit()
+
+function listGuildChannelsPrompt (guilds) {
+  const prompt = {
+    type: 'checkbox',
+    name: 'choosenGuildChannels',
+    choices: [],
+    message: 'Please choose the channels in the guilds (Multiple choices):\n',
+    validate: function (vals) {
+      if (vals.length < 1) {
+        return 'Choose at least one.'
+      }
+      return true
+    }
   }
 
-  let prom = []
-  if (settings.authentication.discord.token) {
-    prom.push(new Promise((resolve, reject) => {
-      client.once('ready', () => {
-        ui.log.write(`${green('Log:')} ${green(bold('Successfully authorized on Discord.'))}`)
-        resolve()
-      }).login(settings.authentication.discord.token).catch(e => {
-        if (settings.debug) console.error(e)
-        ui.log.write(`${red('Error:')} ${red(bold(e.message))}`)
-        client.removeAllListeners('ready')
-        loginFailed = true
-        resolve(loginQuestion)
-      })
-    }))
-  }
+  const parsedGuilds = []
 
-  Promise.all(prom).then(res => {
-    prompt(res[0] || loginQuestion).then(answers => {
-      delete answers['discordToken'] // Get rid of it.
-      let chooseChannels
-      if (settings.archiving.GROUPS.length === 0 && settings.archiving.GUILDS.length === 0 && settings.archiving.DIRECTMESSAGES.length === 0) {
-        let guilds = []
-        let places = {
-          guilds: [],
-          directMessages: [],
-          groups: []
+  for (let index = 0; index < guilds.length; index++) {
+    const guild = discord.guilds.get(guilds[index])
+
+    parsedGuilds.push({
+      name: guild.name,
+      id: guild.id,
+      channelCategories: [
+        {
+          name: 'No category',
+          channels: [{
+            name: 'ALL CHANNELS',
+            checked: !!guilds.find(g => g.all),
+            id: guild.channels.filter(c => c.type === 'text' && c.memberPermissions(guild.member(discord.user.id)).has('READ_MESSAGE_HISTORY') && c.memberPermissions(guild.member(discord.user.id)).has('READ_MESSAGES')).map(c => c.id)
+          }]
         }
-        client.channels.filter(i => {
-          switch (i.type) {
-            case 'dm':
-              return true
-            case 'group':
-              return true
-            case 'text':
-              let guild = client.guilds.get(i.guild.id)
-              return guild.channels.get(i.id).memberPermissions(guild.member(client.user.id)).has('READ_MESSAGE_HISTORY') && guild.channels.get(i.id).memberPermissions(guild.member(client.user.id)).has('READ_MESSAGES')
-            default:
-              return false
-          }
-        }).map(i => {
-          if (i.type === 'dm') {
-            places.directMessages.push({ name: `${i.recipient.username} (${i.recipient.id})`, value: `${i.type},${i.recipient.id}` })
-          } else if (i.type === 'text') {
-            if (guilds.indexOf(i.guild.id) === -1) {
-              places.guilds.push({ name: `(${i.guild.nameAcronym}) ${i.guild.name} (${i.guild.id})`, value: `${i.type},${i.guild.id}` })
-              guilds.push(i.guild.id)
-            }
-          } else if (i.type === 'group') {
-            places.groups.push({ name: `${i.name} (${i.id})`, value: `${i.type},${i.ownerID}` })
-          }
-        })
-        chooseChannels = {
-          type: 'checkbox',
-          name: 'chosenChannels',
-          choices: [],
-          message: 'Please choose what to archive (Multiple choices):\n',
-          validate: function (vals) {
-            if (vals.length < 1) {
-              return 'Choose at least one.'
-            }
-            return true
-          }
-        }
-        if (places.guilds.length > 0) {
-          chooseChannels.choices.push(new inquirer.Separator('= Guilds ='))
-          chooseChannels.choices.push({ name: 'ALL', checked: true, value: 'text,ALL' })
-          places.guilds.forEach(i => {
-            chooseChannels.choices.push(i)
-          })
-        }
-        if (places.groups.length > 0) {
-          chooseChannels.choices.push(new inquirer.Separator('= Groups ='))
-          chooseChannels.choices.push({ name: 'ALL', checked: true, value: 'group,ALL' })
-          places.groups.forEach(i => {
-            chooseChannels.choices.push(i)
-          })
-        }
-        if (places.directMessages.length > 0) {
-          chooseChannels.choices.push(new inquirer.Separator('= Direct messages ='))
-          chooseChannels.choices.push({ name: 'ALL', checked: true, value: 'dm,ALL' })
-          places.directMessages.forEach(i => {
-            chooseChannels.choices.push(i)
-          })
-        }
-      }
-      if (chooseChannels) questions.push(chooseChannels)
-      if (questions.length > 0) {
-        return prompt(questions)
-      } else {
-        // Initialize auto or single-use.
-        return false
-      }
-    }).then(answers => {
-      if (answers) {
-        if (typeof answers['tempDir'] === 'string') {
-          settings.archiving.tempDir = answers['tempDir'].length === 0
-            ? __dirname
-            : answers['tempDir'].trim()
-        }
-        if (typeof answers['archiveDir'] === 'string') {
-          settings.archiving.archiveDir = answers['archiveDir'].length === 0
-            ? __dirname
-            : answers['archiveDir'].trim()
-        }
-        if (typeof answers['cronSchedule'] === 'string') {
-          settings.archiving.auto.cronSchedule = answers['cronSchedule'].length === 0
-            ? '0 0 */1 * *'
-            : answers['cronSchedule'].trim()
-        }
-        if (answers['chosenChannels']) {
-          answers['chosenChannels'].forEach(i => {
-            let type = i.split(',')[0] === 'dm' ? 'DIRECTMESSAGES' : i.split(',')[0] === 'group' ? 'GROUPS' : 'GUILDS'
-            let id = i.split(',')[1]
-            settings.archiving[type].push(id)
-          })
+      ]
+    })
+
+    const pG = parsedGuilds.find(pG => pG.id === guild.id)
+
+    guild.channels.forEach(channel => {
+      if (channel.type === 'text' && channel.memberPermissions(guild.member(discord.user.id)).has('READ_MESSAGE_HISTORY') && channel.memberPermissions(guild.member(discord.user.id)).has('READ_MESSAGES')) {
+        const channelObject = {
+          name: channel.name,
+          id: channel.id,
+          checked: settings.archiving.GUILDS[guild.id] ? (settings.archiving.GUILDS[guild.id].indexOf(channel.id) > -1) : false
         }
 
-        // Validation passed.
-        if (answers['chosenChannels'] || answers.length > 0) {
-          return prompt({
-            type: 'confirm',
-            name: 'saveSettings',
-            message: 'Do you want to save your choices to settings.js?',
-            default: false
-          })
-        } else return false
-      } else {
-        return false
-      }
-    }).then(answers => {
-      // Validation passed.
-      if (answers) {
-        if (answers['saveSettings']) {
-          if (settings.debug) ui.log.write(`${gray('Debug:')} ${gray(bold('Creating backup file of existing settings file.'))}`)
-          fs.writeFileSync(path.join(__dirname, 'settings.js.bkp'), JSON.stringify(require('./settings.js'), null, 2))
-          if (settings.debug) ui.log.write(`${gray('Debug:')} ${gray(bold('Writing new data to settings file.'))}`)
-          fs.writeFileSync(path.join(__dirname, 'settings.js'), applyNewSettings())
-          // After that is complete, initialize auto or single-use.
-          return start()
-        } else return start()
-      } else {
-        // Just token was inputted, probably, initialize auto or single-use.
-        return start()
+        if (channel.parent) {
+          const parentInCategoriesArray = () => pG.channelCategories.find(cC => cC.name === channel.parent.name)
+          if (!parentInCategoriesArray()) pG.channelCategories.push({ name: channel.parent.name, id: channel.parent.id, channels: [] })
+          parentInCategoriesArray().channels.push(channelObject)
+        } else {
+          const defaultCategory = () => pG.channelCategories.find(cC => cC.name === 'No category')
+          defaultCategory().channels.push(channelObject)
+        }
       }
     })
-  })
-})
+  }
+
+  if (parsedGuilds.length > 0) {
+    parsedGuilds.forEach(pG => {
+      prompt.choices.push(new cli.Separator(`= ${pG.name} (${pG.id}) =`))
+      pG.channelCategories.forEach(cC => {
+        prompt.choices.push(new cli.Separator(`== ${cC.name}${cC.id ? ` (${cC.id})` : ''} ==`))
+        cC.channels.forEach(c => {
+          prompt.choices.push({ name: `${c.name}${typeof c.id === 'string' ? ` (${c.id})` : ''}`, checked: c.checked, value: { guild: pG.id, id: c.id } })
+        })
+      })
+    })
+  }
+
+  return prompts.next(prompt)
+}
+
+function onAnswer (question) {
+  const answer = question.answer
+  switch (question.name) {
+    case 'acceptTOS':
+      if (answer === 'Yes') {
+        if (settings.authentication.discord.token.length > 0) return attemptLogin(settings.authentication.discord.token)
+        else return prompts.next(questions.loginQuestion)
+      } else {
+        ui.log.write(red('ToS not accepted, aborting script.'))
+        process.exit()
+      }
+      break
+    case 'authToken':
+      return attemptLogin(answer)
+    case 'archiveDir':
+      if (typeof answer === 'string') {
+        settings.archiving.archiveDir = answer.length === 0
+          ? __dirname
+          : answer.trim()
+      }
+      if (settings.archiving.tempDir.length === 0 || !fs.existsSync(path.join(settings.archiving.tempDir)) || fs.accessSync(path.join(settings.archiving.tempDir), fs.constants.R_OK | fs.constants.W_OK) !== undefined) prompts.next(questions.temporaryDirectory)
+      else listGuildsPrompt()
+      break
+    case 'tempDir':
+      if (typeof answer === 'string') {
+        settings.archiving.tempDir = answer.length === 0
+          ? __dirname
+          : answer.trim()
+      }
+      return listGuildsPrompt()
+    case 'choosenGuilds': {
+      const guilds = [...new Set(answer.filter(choice => choice.type === 'guild').map(guild => guild.id).flat())]
+      const groups = [...new Set(answer.filter(choice => choice.type === 'group').map(group => group.id).flat())]
+      const dms = [...new Set(answer.filter(choice => choice.type === 'dm').map(dm => dm.id).flat())]
+      settings.archiving.GROUPS = groups.length > 0 ? groups : []
+      settings.archiving.DIRECTMESSAGES = dms.length > 0 ? dms : []
+      settings.archiving.GUILDS = {}
+      if (guilds.length > 0) {
+        return listGuildChannelsPrompt(guilds)
+      } else {
+        if (settings.debug) {
+          console.table(guilds)
+          console.table(groups)
+          console.table(dms)
+        }
+        return prompts.next(questions.saveToFile)
+      }
+    }
+    case 'choosenGuildChannels': {
+      const parsedGuildsAndChannels = {}
+      answer.forEach(channel => {
+        if (!parsedGuildsAndChannels[channel.guild]) parsedGuildsAndChannels[channel.guild] = []
+        if (typeof channel.id !== 'string') channel.id.forEach(id => parsedGuildsAndChannels[channel.guild].push(id))
+        else parsedGuildsAndChannels[channel.guild].push(channel.id)
+        parsedGuildsAndChannels[channel.guild] = [...new Set(parsedGuildsAndChannels[channel.guild])]
+      })
+      settings.archiving.GUILDS = parsedGuildsAndChannels
+      if (settings.debug) {
+        console.table(Object.keys(settings.archiving.GUILDS))
+        console.table(settings.archiving.GROUPS)
+        console.table(settings.archiving.DIRECTMESSAGES)
+      }
+      return prompts.next(questions.saveToFile)
+    }
+    case 'saveSettings':
+      if (answer) {
+        if (settings.debug) ui.log.write(`${gray('Debug:')} ${gray(bold('Creating backup file of existing settings file.'))}`)
+        if (!fs.existsSync(path.join(__dirname, 'settings.json.bkp'))) fs.writeFileSync(path.join(__dirname, 'settings.json.bkp'), JSON.stringify(require('./settings.json'), null, 2))
+        if (settings.debug) ui.log.write(`${gray('Debug:')} ${gray(bold('Writing new data to settings file.'))}`)
+        saveSettings(settings)
+      }
+      return start()
+  }
+}
 
 function start () {
-  let date = Date.now()
+  const date = Date.now()
   ui.updateBottomBar(`${green(bold('Next archive at'))} ${green(bold(underline(settings.archiving.auto.enabled ? cronParser.parseExpression(settings.archiving.auto.cronSchedule).next().toString() : new Date(date).toString())))}${green(bold('.'))}`)
   setTimeout(() => {
-    discord(client, settings, { ui, colors: { red, blue, green, redBright, underline, bold, gray } }, date).then(res => {
-      // All done
-      ui.log.write(`${green(bold(`Done! It took ~${Number(((Date.now() - date) / 1000) / 60).toFixed(0)} minutes to finish.`))}`)
+    archive({ discord, settings, ui, colors: { red, blue, green, underline, bold, gray }, date, rimraf, fetch, fs, writeFile, path }).then(() => {
+      // All done.
+      ui.log.write(`${green(bold(`Done! It took around ${Number(((Date.now() - date) / 1000) / 60).toFixed(0)} minutes to finish.`))}`)
 
       if (settings.archiving.auto.enabled) {
-        ui.updateBottomBar(`${green(bold(`Next archive at`))} ${green(bold(underline(cronParser.parseExpression(settings.archiving.auto.cronSchedule).next().toString())))}${green(bold('.'))}`)
+        ui.updateBottomBar(`${green(bold('Next archive at'))} ${green(bold(underline(cronParser.parseExpression(settings.archiving.auto.cronSchedule).next().toString())))}${green(bold('.'))}`)
         setTimeout(() => {
           start()
         }, new Date(cronParser.parseExpression(settings.archiving.auto.cronSchedule).next()) - Date.now())
       } else {
-        ui.updateBottomBar(`${green(bold(`Thank you for using DARAH.`))}`)
+        ui.updateBottomBar(`${green(bold('Thank you for using DARAH.'))}`)
         process.exit()
       }
     })

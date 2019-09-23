@@ -1,0 +1,72 @@
+{
+  "authentication": {
+    "discord": {
+      "token": ""
+    }
+  },
+  "archiving": {
+    "GUILDS": {},
+    "GROUPS": [],
+    "DIRECTMESSAGES": [],
+    "tempDir": "",
+    "archiveDir": "",
+    "auto": {
+      "enabled": false,
+      "cronSchedule": "0 0 */1 * *"
+    },
+    "overrule": false,
+    "defaultOptions": {
+      "fullArchive": true,
+      "everyMessages": 100000,
+      "channels": {
+        "id": true,
+        "name": true,
+        "topic": true,
+        "voice": true,
+        "creationDate": true
+      },
+      "messages": {
+        "id": true,
+        "attachments": true,
+        "embeds": true,
+        "reactions": true,
+        "creationDate": true
+      },
+      "members": {
+        "name": true,
+        "id": true,
+        "creationDate": true,
+        "joinDate": true,
+        "roles": true,
+        "icon": true
+      },
+      "information": {
+        "id": true,
+        "name": true,
+        "icon": true,
+        "owner": true,
+        "emojis": true,
+        "roles": true,
+        "channels": true,
+        "users": true,
+        "creationDate": true
+      },
+      "downloads": {
+        "icons": true,
+        "images": true,
+        "emojis": true,
+        "videos": true,
+        "audios": true,
+        "texts": true,
+        "misc": true
+      },
+      "trackAndArchiveDeletedMessages": true,
+      "output": {
+        "appendWhoArchived": true,
+        "formatted": false,
+        "whiteSpace": 2
+      }
+    }
+  },
+  "debug": true
+}
