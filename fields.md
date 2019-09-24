@@ -146,49 +146,6 @@
     * `m[].ts`: **Boolean** Message text to speech if used
     * `m[].es`: **Array{}** Message edits if exists *(Not working)*
       * `m[].es[string]:` **string** Message edit content
-  * `d`: **Array{}** Deleted messages
-    * `d[].i`: **string** Deleted message id
-    * `d[].u`: **string** Deleted message author id
-    * `d[].c`: **Object** Deleted message content object
-      * `d[].c.m`: **string** Deleted message content
-      * `d[].c.a`: **Array{}** Deleted message attachments if exists
-        * `d[].c.a[].n`: **string** Deleted message attachment file name
-        * `d[].c.a[].u`: **string** Deleted message attachment file url
-      * `d[].c.e`: **Array{}** Deleted message embeds if exists
-        * `d[].c.e[].a`: **Object** Deleted message embed author if exists
-          * `d[].c.e[].a.n`: **string** Deleted message embed author name
-          * `d[].c.e[].a.u`: **string** Deleted message embed author icon url
-        * `d[].c.e[].c`: **string** Deleted message embed hex color
-        * `d[].c.e[].d`: **string** Deleted message embed description
-        * `d[].c.e[].f`: **Array{}** Deleted message embed fields object
-          * `d[].c.e[].f[].l`: **Boolean** Deleted message embed field if inline
-          * `d[].c.e[].f[].n`: **string** Deleted message embed field name
-          * `d[].c.e[].f[].v`: **string** Deleted message embed field value
-        * `d[].c.e[].fo`: **Object** Deleted message embed footer object
-          * `d[].c.e[].fo.u`: **string** Deleted message embed footer icon url
-          * `d[].c.e[].fo.v`: **string** Deleted message embed footer text
-        * `d[].c.e[].i`: **string** Deleted message embed image if exists
-        * `d[].c.e[].p`: **Object** Deleted message embed provider object
-          * `d[].c.e[].p.n`: **Object** Deleted message embed provider name
-          * `d[].c.e[].p.u`: **Object** Deleted message embed provider url
-        * `d[].c.e[].th`: **string** Deleted message embed thumbnail url if exists
-        * `d[].c.e[].t`: **Date** Deleted message embed timestamp
-        * `d[].c.e[].ti`: **string** Deleted message embed title
-        * `d[].c.e[].ty`: **string** Deleted message embed type
-        * `d[].c.e[].v`: **string** Deleted message embed video url if exists
-      * `d[].c.r`: **Array{}** Deleted message reactions if exists
-        * `d[].c.r[].u`: **Array** Deleted message reaction users
-          * `d[].c.r[].u[]`: **string** Deleted message reaction user id
-        * `m[].c.r[].i`: **string** Deleted message reaction id
-    * `d[].t`: **Date** Deleted message creation timestamp
-    * `d[].p`: **Boolean** Deleted message is pinned if applicable
-    * `d[].e`: **Date** Deleted message last edit timestamp if applicable
-    * `d[].n`: **string** Deleted message delivery nonce, may be a completely useless field
-    * `d[].s`: **Boolean** Deleted message if system
-    * `d[].ty`: **Boolean** Deleted message type if applicable
-    * `d[].ts`: **Boolean** Deleted message text to speech if used
-    * `d[].es`: **Array{}** Deleted message edits if exists *(Not working)*
-      * `d[].es[string]:` **string** Deleted message edit content
 ### Downloads (Directory)
   * `Guild` Directory for guild content.
     * `Guild/(number counter).(extension)` Guild emojis
