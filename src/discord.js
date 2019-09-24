@@ -23,34 +23,15 @@ const channelCache = {}
 const channelTitle = (channel) => channel.type === 'text' ? `guild ${channel.guild.name}, channel` : channel.type === 'dm' ? 'DM, channel' : 'group DM, channel'
 const channelName = (channel) => channel.name || (channel.recipient ? channel.recipient.username : channel.recipients.map(user => user.username).join(', '))
 
-function log ({ message, type }, settings, ui, { red, green, bold, gray }) {
-  if (!settings.auto && ui) {
-    switch (type) {
-      case 'debug':
-        if (settings.debug) ui.log.write(gray(`Debug: ${bold(message)}`))
-        break
-      case 'error':
-        ui.log.write(red(`Error: ${bold(message)}`))
-        break
-      case 'bar':
-        ui.updateBottomBar(green(bold(message)))
-        break
-      default:
-        ui.log.write(green(`Log: ${bold(message)}`))
-        break
-    }
-  } else console.log(message)
-}
-
 // Load in guilds & user DMs
-async function loadInstances ({ discord, settings, ui, colors, date, rimraf, fetch, fs, writeFile, path }) {
+async function loadInstances ({ discord, settings, ui, date, rimraf, fetch, fs, writeFile, path, log }) {
   const types = [
     ['guilds', Object.entries(settings.archiving.GUILDS)],
     ['groups', settings.archiving.GROUPS],
     ['dms', settings.archiving.DIRECTMESSAGES]
   ]
 
-  log({ message: `Archiving ${types[0][1].length + types[1][1].length + types[2][1].length} channels.` }, settings, ui, colors)
+  log({ message: `Archiving ${Object.values(settings.archiving.GUILDS).flat().length + types[1][1].length + types[2][1].length} channels.` }, settings, ui)
 
   for (let i = 0; i < types.length; i++) {
     const type = types[i]
@@ -60,15 +41,15 @@ async function loadInstances ({ discord, settings, ui, colors, date, rimraf, fet
       if (type[0] === 'guilds') {
         channels = discord.guilds.get(typeArray[0]).channels.filter(c => typeArray[1].indexOf(c.id) > -1).map(c => c.id)
         if (await checkIfExistsOrCreate({ fs, path }, settings.archiving.archiveDir, 'DARAH_ARCHIVES', '[GUILD]' + typeArray[0]) === 'created') {
-          log({ type: 'debug', message: `Created archive directory for ${typeArray[0]} guild.` }, settings, ui, colors)
+          log({ type: 'debug', message: `Created archive directory for ${typeArray[0]} guild.` }, settings, ui)
         }
         // Create temp directory
         if (await checkIfExistsOrCreate({ fs, path }, settings.archiving.tempDir, 'DARAH_TEMP', '[GUILD]' + typeArray[0]) === 'created') {
-          log({ type: 'debug', message: `Created cache directory for ${typeArray[0]} guild.` }, settings, ui, colors)
+          log({ type: 'debug', message: `Created cache directory for ${typeArray[0]} guild.` }, settings, ui)
         } else {
           // Purge & Create directory
           await purgeAndCreate({ fs, path, rimraf }, settings.archiving.tempDir, 'DARAH_TEMP', '[GUILD]' + typeArray[0])
-          log({ type: 'debug', message: `Recreated cache directory for ${typeArray[0]} guild.` }, settings, ui, colors)
+          log({ type: 'debug', message: `Recreated cache directory for ${typeArray[0]} guild.` }, settings, ui)
         }
         channelCache[typeArray[0]] = {}
       }
@@ -79,34 +60,34 @@ async function loadInstances ({ discord, settings, ui, colors, date, rimraf, fet
           channel = discord.channels.get(channels[iii])
           if (type[0] === 'groups') {
             if (await checkIfExistsOrCreate({ fs, path }, settings.archiving.archiveDir, 'DARAH_ARCHIVES', '[GROUP]' + channel.id) === 'created') {
-              log({ type: 'debug', message: `Created archive directory for ${channel.id} group channel.` }, settings, ui, colors)
+              log({ type: 'debug', message: `Created archive directory for ${channel.id} group channel.` }, settings, ui)
             }
             // Create temp directory
             if (await checkIfExistsOrCreate({ fs, path }, settings.archiving.tempDir, 'DARAH_TEMP', '[GROUP]' + channel.id) === 'created') {
-              log({ type: 'debug', message: `Created cache directory for ${channel.id} group channel.` }, settings, ui, colors)
+              log({ type: 'debug', message: `Created cache directory for ${channel.id} group channel.` }, settings, ui)
             } else {
               // Purge & Create directory
               await purgeAndCreate({ fs, path, rimraf }, settings.archiving.tempDir, 'DARAH_TEMP', '[GROUP]' + channel.id)
-              log({ type: 'debug', message: `Recreated cache directory for ${channel.id} group channel.` }, settings, ui, colors)
+              log({ type: 'debug', message: `Recreated cache directory for ${channel.id} group channel.` }, settings, ui)
             }
             channelCache[channel.id] = {}
           } else if (type[0] === 'dms') {
             if (await checkIfExistsOrCreate({ fs, path }, settings.archiving.archiveDir, 'DARAH_ARCHIVES', '[DM]' + channel.recipient.id) === 'created') {
-              log({ type: 'debug', message: `Created archive directory for ${channel.recipient.id} dm channel.` }, settings, ui, colors)
+              log({ type: 'debug', message: `Created archive directory for ${channel.recipient.id} dm channel.` }, settings, ui)
             }
             // Create temp directory
             if (await checkIfExistsOrCreate({ fs, path }, settings.archiving.tempDir, 'DARAH_TEMP', '[DM]' + channel.recipient.id) === 'created') {
-              log({ type: 'debug', message: `Created cache directory for ${channel.recipient.id} dm channel.` }, settings, ui, colors)
+              log({ type: 'debug', message: `Created cache directory for ${channel.recipient.id} dm channel.` }, settings, ui)
             } else {
               // Purge & Create directory
               await purgeAndCreate({ fs, path, rimraf }, settings.archiving.tempDir, 'DARAH_TEMP', '[DM]' + channel.recipient.id)
-              log({ type: 'debug', message: `Recreated cache directory for ${channel.recipient.id} dm channel.` }, settings, ui, colors)
+              log({ type: 'debug', message: `Recreated cache directory for ${channel.recipient.id} dm channel.` }, settings, ui)
             }
             channelCache[channel.recipient.id] = {}
           }
         }
 
-        log({ message: `Preparing archiving on ${channelTitle(channel)} ${channelName(channel)}...` }, settings, ui, colors)
+        log({ message: `Preparing archiving on ${channelTitle(channel)} ${channelName(channel)}...` }, settings, ui)
 
         try {
           await start({ channel })
@@ -117,7 +98,7 @@ async function loadInstances ({ discord, settings, ui, colors, date, rimraf, fet
       }
     }
 
-    log({ type: 'debug', message: `Done with ${type[0]}.` }, settings, ui, colors)
+    log({ type: 'debug', message: `Done with ${type[0]}.` }, settings, ui)
   }
 
   async function start ({ channel }) {
@@ -250,7 +231,7 @@ async function loadInstances ({ discord, settings, ui, colors, date, rimraf, fet
                 r: availableForRoles.length > 0 ? availableForRoles : undefined
               })
 
-              if (channelOptions.downloads.emojis && emoji.url) promises.push(downloadGuildEmoji(object, { emoji, emojisInGuild, id }, { fetch, fs, path, log, settings, ui, colors }))
+              if (channelOptions.downloads.emojis && emoji.url) promises.push(downloadGuildEmoji(object, { emoji, emojisInGuild, id }, { fetch, fs, path, log, settings, ui }))
             }
           }
 
@@ -288,7 +269,7 @@ async function loadInstances ({ discord, settings, ui, colors, date, rimraf, fet
                 b: guild.me.user.bot
               } : undefined
           }
-          if (channelOptions.downloads.icons && channelOptions.information.icon && object[id].g.u) promises.push(downloadGuildIcon(object, id, { fetch, fs, path, log, settings, ui, colors }))
+          if (channelOptions.downloads.icons && channelOptions.information.icon && object[id].g.u) promises.push(downloadGuildIcon(object, id, { fetch, fs, path, log, settings, ui }))
         }
       } else if (channel.type === 'dm') {
         channelCache[channel.recipient.id][channel.id] = {
@@ -469,7 +450,7 @@ async function loadInstances ({ discord, settings, ui, colors, date, rimraf, fet
             attachments.push({ i: `${auxilliaryCounter}-${ind + 1}`, n: channelOptions.information.name ? attachment.filename : undefined, u: channelOptions.channels.id ? attachment.url : undefined })
             if (Object.entries(channelOptions.downloads).map(i => i[1]).filter(Boolean).length > 0) {
               attachment.id = `${auxilliaryCounter}-${ind + 1}`
-              promises.push(downloadAttachment(object, { attachment, channel, id }, { fetch, fs, path, log, settings, ui, colors }))
+              promises.push(downloadAttachment(object, { attachment, channel, id }, { fetch, fs, path, log, settings, ui }))
             }
           }
         }
@@ -535,7 +516,7 @@ async function loadInstances ({ discord, settings, ui, colors, date, rimraf, fet
                 object[id].e[object[id].e.findIndex(e => e.i === reaction.emoji.id)] = emoji
               } else object[id].e.push(emoji)
 
-              if (channelOptions.downloads.emojis && (reaction.emoji.url || reaction.emoji.id)) promises.push(downloadEmoji(object, { reaction, id }, { fetch, fs, path, log, settings, ui, colors }))
+              if (channelOptions.downloads.emojis && (reaction.emoji.url || reaction.emoji.id)) promises.push(downloadEmoji(object, { reaction, id }, { fetch, fs, path, log, settings, ui }))
             }
             reactions.push({ c: reaction.count, u: reaction.users.size > 0 ? reaction.users.map(i => i.id) : undefined, d: object[id].e.findIndex(i => i.d === reaction.emoji.identifier) })
           }
@@ -583,7 +564,7 @@ async function loadInstances ({ discord, settings, ui, colors, date, rimraf, fet
             object[id].u[object[id].u.findIndex(i => i.i === msg.author.id)] = firstUserMention
           } else object[id].u.push(firstUserMention)
 
-          if (channelOptions.downloads.icons && channelOptions.members.icon && (msg.author.avatarURL || msg.author.displayAvatarURL)) promises.push(downloadUserAvatar(object, { user: msg.author, id }, { fetch, fs, path, log, settings, ui, colors }))
+          if (channelOptions.downloads.icons && channelOptions.members.icon && (msg.author.avatarURL || msg.author.displayAvatarURL)) promises.push(downloadUserAvatar(object, { user: msg.author, id }, { fetch, fs, path, log, settings, ui }))
         }
 
         let edits
@@ -624,7 +605,7 @@ async function loadInstances ({ discord, settings, ui, colors, date, rimraf, fet
                   retry: true
                 }
                 if (channelOptions.downloads.icons && channelOptions.members.icon && (theUser.avatarURL || theUser.avatar)) {
-                  if (theUser.avatarURL || theUser.displayAvatarURL || theUser.avatar) promises.push(downloadUserAvatar(object, { user: { ...theUser, displayAvatarURL: theUser.displayAvatarURL ? theUser.displayAvatarURL : (!theUser.displayAvatarURL && theUser.avatar) ? `https://cdn.discordapp.com/avatars/${theUser.id}/${theUser.avatar}.png` : undefined }, id }, { fetch, fs, path, log, settings, ui, colors }))
+                  if (theUser.avatarURL || theUser.displayAvatarURL || theUser.avatar) promises.push(downloadUserAvatar(object, { user: { ...theUser, displayAvatarURL: theUser.displayAvatarURL ? theUser.displayAvatarURL : (!theUser.displayAvatarURL && theUser.avatar) ? `https://cdn.discordapp.com/avatars/${theUser.id}/${theUser.avatar}.png` : undefined }, id }, { fetch, fs, path, log, settings, ui }))
                 }
               }
             }
@@ -662,7 +643,7 @@ async function loadInstances ({ discord, settings, ui, colors, date, rimraf, fet
               })
 
               const theEmoji = object[id].e[object[id].e.findIndex(e => e.i === mID)]
-              if (channelOptions.downloads.emojis && mID) promises.push(downloadEmoji(object, { reaction: { emoji: { url: theEmoji.u, identifier: theEmoji.d } }, id }, { fetch, fs, path, log, settings, ui, colors }))
+              if (channelOptions.downloads.emojis && mID) promises.push(downloadEmoji(object, { reaction: { emoji: { url: theEmoji.u, identifier: theEmoji.d } }, id }, { fetch, fs, path, log, settings, ui }))
             }
             msg.content = msg.content.replace(i, `<:${typeof object[id].e.findIndex(e => e.i === mID) === 'number' ? object[id].e.findIndex(e => e.i === mID) : 'undefined-emoji'}:>`)
           }
@@ -738,7 +719,7 @@ async function loadInstances ({ discord, settings, ui, colors, date, rimraf, fet
             }
           }
 
-          if (promises.length > 0) log({ type: 'bar', message: 'Still downloading files...' }, settings, ui, colors)
+          if (promises.length > 0) log({ type: 'bar', message: 'Still downloading files...' }, settings, ui)
 
           const res = await Promise.all(promises)
 
@@ -762,18 +743,18 @@ async function loadInstances ({ discord, settings, ui, colors, date, rimraf, fet
 
             messages = { m: [] } // RESET
 
-            log({ message: `Dumping collected data for ${channel.id} in file, currently at split ${channelCache[id][channel.id].atSplit}.` }, settings, ui, colors)
+            log({ message: `Dumping collected data for ${channel.id} in file, currently at split ${channelCache[id][channel.id].atSplit}.` }, settings, ui)
             return fetchMessages(channel, after ? null : msgLast.id, after ? msgFirst.id : null)
           } else {
             promises = [] // Clear
-            log({ type: 'bar', message: colors.green(`${colors.bold(`Reading messages in ${channel.id}, currently at`)} ${colors.underline(channelCache[id][channel.id].count)} ${colors.bold('read messages...')}`) }, settings, ui, colors)
+            log({ type: 'bar', message: `Reading messages in ${channel.id}, currently at ${channelCache[id][channel.id].count} read messages...` }, settings, ui)
             return fetchMessages(channel, after ? null : msgLast.id, after ? msgFirst.id : null)
           }
         } else {
-          if (promises.length > 0) log({ type: 'bar', message: 'Still downloading files...' }, settings, ui, colors)
+          if (promises.length > 0) log({ type: 'bar', message: 'Still downloading files...' }, settings, ui)
           // We finished reading in this channel.
           const res = await Promise.all(promises)
-          log({ message: `Finished archiving ${channel.id}.` }, settings, ui, colors)
+          log({ message: `Finished archiving ${channel.id}.` }, settings, ui)
 
           if (!object[id].count) object[id].count = { messages: 0, downloads: 0 }
 
@@ -830,6 +811,7 @@ async function loadInstances ({ discord, settings, ui, colors, date, rimraf, fet
   for (let index = 0; index < objects.length; index++) {
     const i = objects[index]
     const c = i[1]
+
     if (c.count && c.count.messages > 0) {
       const tempDir = path.join(settings.archiving.tempDir, 'DARAH_TEMP', c.type + i[0])
 
@@ -861,35 +843,37 @@ async function loadInstances ({ discord, settings, ui, colors, date, rimraf, fet
       for (let i = 0; i < c.u.length; i++) {
         if (c.u[i].retry) c.u[i].retry = undefined
       }
+
       if (!c.o.members.id) { // Get rid of ID.
         for (let i = 0; i < c.u.length; i++) {
           c.u[i].i = undefined
         }
       }
+
       // Dump object[string].ca into archive directory.
       fs.writeFileSync(path.join(c.directory, 'cache.json'), JSON.stringify(c.ca, null, c.o.output.formatted ? c.o.output.whiteSpace : 0))
-      log({ type: 'debug', message: `Updating cache file for ${i[0]}.` }, settings, ui, colors)
+      log({ type: 'debug', message: `Updating cache file for ${i[0]}.` }, settings, ui)
 
       if (!settings.archiving.overrule) {
         // Recreate settings file in archive directory.
         fs.writeFileSync(path.join(c.directory, 'settings.json'), JSON.stringify(c.o, null, c.o.output.formatted ? c.o.output.whiteSpace : 1))
-        log({ type: 'debug', message: `Recreating settings file for ${i[0]}.` }, settings, ui, colors)
+        log({ type: 'debug', message: `Recreating settings file for ${i[0]}.` }, settings, ui)
       }
 
       // Dump object[string].c into file.
       fs.writeFileSync(path.join(tempDir, '[INFO]channels.json'), JSON.stringify({ c: c.c, p: c.p }, null, c.o.output.formatted ? c.o.output.whiteSpace : 0))
-      log({ type: 'debug', message: `Appending channels file for ${i[0]}.` }, settings, ui, colors)
+      log({ type: 'debug', message: `Appending channels file for ${i[0]}.` }, settings, ui)
 
       // Dump object[string].r into file.
       if ((c.r && c.r.length > 0) || c.r) {
         fs.writeFileSync(path.join(tempDir, '[INFO]roles.json'), JSON.stringify(c.r, null, c.o.output.formatted ? c.o.output.whiteSpace : 0))
-        log({ type: 'debug', message: `Appending roles file for ${i[0]}.` }, settings, ui, colors)
+        log({ type: 'debug', message: `Appending roles file for ${i[0]}.` }, settings, ui)
       }
 
       // Dump object[string].e into file.
       if ((c.e && c.e.length > 0) || c.e) {
         fs.writeFileSync(path.join(tempDir, '[INFO]emojis.json'), JSON.stringify(c.e, null, c.o.output.formatted ? c.o.output.whiteSpace : 0))
-        log({ type: 'debug', message: `Appending emojis file for ${i[0]}.` }, settings, ui, colors)
+        log({ type: 'debug', message: `Appending emojis file for ${i[0]}.` }, settings, ui)
       }
 
       // Dump object[string].g into file.
@@ -898,19 +882,18 @@ async function loadInstances ({ discord, settings, ui, colors, date, rimraf, fet
       /* KararTY's note: It is on the person taking the archive to prove that their archive doesn't contain any modified/edited information.
           This/These script(s), and its coder(s), is/are not responsible for any erroneous and/or modified/edited information in any of the archives. */
       fs.writeFileSync(path.join(tempDir, `[INFORMATION]${c.o.information.name ? c.g.n : '-'}(${c.o.information.id ? c.g.i : '-'}).json`), JSON.stringify(c.g, null, c.o.output.formatted ? c.o.output.whiteSpace : 0))
-      log({ type: 'debug', message: `Appending info file for ${i[0]}.` }, settings, ui, colors)
-      log({ type: 'debug', message: `Appending info file for ${i[0]}.` }, settings, ui, colors)
+      log({ type: 'debug', message: `Appending info file for ${i[0]}.` }, settings, ui)
 
       // Dump object[string].u into file.
       fs.writeFileSync(path.join(tempDir, '[INFO]users.json'), JSON.stringify(c.u, null, c.o.output.formatted ? c.o.output.whiteSpace : 0))
-      log({ type: 'debug', message: `Appending users file for ${i[0]}.` }, settings, ui, colors)
+      log({ type: 'debug', message: `Appending users file for ${i[0]}.` }, settings, ui)
 
-      log({ message: `Archived ${c.count.messages} messages & downloaded ${c.count.downloads} files, for ${i[0]}.` }, settings, ui, colors)
-    } else log({ message: `No (new) messages for ${i[0]}.` }, settings, ui, colors)
+      log({ message: `Archived ${c.count.messages} messages & downloaded ${c.count.downloads} files, for ${i[0]}.` }, settings, ui)
+    } else log({ message: `No (new) messages for ${i[0]}.` }, settings, ui)
   }
 
-  log({ type: 'bar', message: 'Initializing compression...' }, settings, ui, colors)
-  await compression({ object, settings, ui, colors, date, fs, path, log })
+  log({ type: 'bar', message: 'Initializing compression...' }, settings, ui)
+  await compression({ object, settings, ui, date, fs, path, log })
 
   return Promise.resolve()
 }

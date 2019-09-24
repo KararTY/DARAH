@@ -10,10 +10,7 @@
     "DIRECTMESSAGES": [],
     "tempDir": "",
     "archiveDir": "",
-    "auto": {
-      "enabled": false,
-      "cronSchedule": "0 0 */1 * *"
-    },
+    "auto": false,
     "overrule": false,
     "defaultOptions": {
       "fullArchive": true,

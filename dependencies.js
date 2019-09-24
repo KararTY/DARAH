@@ -18,9 +18,6 @@ const writeFile = promisify(fs.writeFile)
 const path = require('path')
 const os = require('os')
 const cli = require('inquirer')
-
-const cronParser = require('cron-parser')
-
 const rimraf = require('rimraf')
 const fetch = require('node-fetch')
 
@@ -37,10 +34,7 @@ const defaultSettings = {
     DIRECTMESSAGES: [],
     tempDir: '',
     archiveDir: '',
-    auto: {
-      enabled: false,
-      cronSchedule: '0 0 */1 * *'
-    },
+    auto: false,
     overrule: false,
     defaultOptions: {
       fullArchive: true,
@@ -107,13 +101,29 @@ try {
   saveSettings(settings)
 }
 
+function log ({ message, type }, settings, ui) {
+  if (!settings.archiving.auto && ui) {
+    switch (type) {
+      case 'debug':
+        if (settings.debug) ui.log.write(gray(`Debug: ${bold(message)}`))
+        break
+      case 'error':
+        ui.log.write(red(`Error: ${bold(message)}`))
+        break
+      case 'bar':
+        ui.updateBottomBar(green(bold(message)))
+        break
+      default:
+        ui.log.write(green(`Log: ${bold(message)}`))
+        break
+    }
+  } else console.log(message)
+}
+
 module.exports = {
   colors: {
-    red,
-    green,
     blue,
     gray,
-    bold,
     underline
   },
   settings: {
@@ -127,7 +137,7 @@ module.exports = {
   path,
   os,
   cli,
-  cronParser,
   rimraf,
-  fetch
+  fetch,
+  log
 }

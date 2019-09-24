@@ -5,12 +5,9 @@
 
 const {
   colors: {
-    red,
-    green,
+    blue,
     gray,
-    bold,
-    underline,
-    blue
+    underline
   },
   settings: {
     current: settings,
@@ -22,12 +19,12 @@ const {
   discord,
   fs,
   writeFile,
-  os,
   path,
+  os,
   cli,
-  cronParser,
   rimraf,
-  fetch
+  fetch,
+  log
 } = require('./dependencies')
 
 const archive = require('./src/discord.js')
@@ -76,7 +73,7 @@ const questions = {
         return true
       } catch (e) {
         if (settings.debug) console.error(e)
-        ui.log.write(`${red('Error:')} ${red(bold(e.message))}`)
+        log({ type: 'error', message: e.message }, settings, ui)
         return 'Error. Try again.'
       }
     }
@@ -95,24 +92,7 @@ const questions = {
         return true
       } catch (e) {
         if (settings.debug) console.error(e)
-        ui.log.write(`${red('Error:')} ${red(bold(e.message))}`)
-        return 'Error. Try again.'
-      }
-    }
-  },
-  cronSchedule: {
-    type: 'input',
-    name: 'cronSchedule',
-    message: `Please enter new cron job schedule string or leave empty to use default ${gray(underline('0 0 */1 * *'))}:\n`,
-    validate: function (val) {
-      val = val.trim()
-      if (val.length === 0) return true
-      try {
-        cronParser.parseExpression(val)
-        return true
-      } catch (e) {
-        if (settings.debug) console.error(e)
-        ui.log.write(`${red('Error:')} ${red(bold(e.message))}`)
+        log({ type: 'error', message: e.message }, settings, ui)
         return 'Error. Try again.'
       }
     }
@@ -126,50 +106,28 @@ const questions = {
 }
 
 function attemptLogin (answer) {
-  ui.log.write('Attempting to authenticate...')
+  log({ message: 'Attempting to authenticate...' }, settings, ui)
   discord.once('ready', () => {
-    ui.log.write(green(`Success: ${bold('Discord account authenticated.')}`))
+    log({ message: 'Discord account authenticated.' }, settings, ui)
     if (settings.archiving.archiveDir.length === 0 || !fs.existsSync(path.join(settings.archiving.archiveDir)) || fs.accessSync(path.join(settings.archiving.archiveDir), fs.constants.R_OK | fs.constants.W_OK) !== undefined) prompts.next(questions.inputDirectory)
     else if (settings.archiving.tempDir.length === 0 || !fs.existsSync(path.join(settings.archiving.tempDir)) || fs.accessSync(path.join(settings.archiving.tempDir), fs.constants.R_OK | fs.constants.W_OK) !== undefined) prompts.next(questions.temporaryDirectory)
     else listGuildsPrompt()
   }).login(answer).catch((e) => {
     if (settings.debug) console.error(e)
-    ui.log.write(red(`Error: ${bold(e.message)}`))
+    log({ type: 'error', message: e.message }, settings, ui)
     discord.removeAllListeners('ready')
     prompts.next(questions.loginQuestion)
   })
 }
 
-if (settings.archiving.auto.enabled) {
-  // if (typeof answers.cronSchedule === 'string') {
-  //   settings.archiving.auto.cronSchedule = answers.cronSchedule.length === 0
-  //     ? '0 0 */1 * *'
-  //     : answers.cronSchedule.trim()
-  // }
-  try {
-    const testingDate = cronParser.parseExpression(settings.archiving.auto.cronSchedule)
-    ui.log.write(`${green('Log:')} ${green(bold('Auto archiving enabled && CRON schedule string succesfully validated.'))} ${gray(`Archives at\n${testingDate.next().toString()},\n${testingDate.next().toString()},\n${testingDate.next().toString()}\n... etc.`)}`)
-  } catch (e) {
-    if (settings.debug) console.error(e)
-    ui.log.write(`${red('Error:')} ${red(bold(`Auto archiving enabled && CRON schedule string failed validation) ${e.message}`))}`)
-    questions.push({
-      type: 'input',
-      name: 'cronSchedule',
-      message: `Please enter new cron job schedule string or leave empty to use default ${gray(underline('0 0 */1 * *'))}:\n`,
-      validate: function (val) {
-        val = val.trim()
-        if (val.length === 0) return true
-        try {
-          cronParser.parseExpression(val)
-          return true
-        } catch (e) {
-          if (settings.debug) console.error(e)
-          ui.log.write(`${red('Error:')} ${red(bold(e.message))}`)
-          return 'Error. Try again.'
-        }
-      }
-    })
-  }
+if (settings.archiving.auto) {
+  log({ message: 'Auto archiving enabled...' }, settings, ui)
+  discord.login(settings.authentication.discord.token).catch(e => { console.error(e); process.exit(1) })
+  discord.once('ready', async () => {
+    await start()
+    log({ message: 'Done with the auto archiving.' }, settings, ui)
+    process.exit()
+  })
 } else prompts.next(questions.firstStart)
 
 function listGuildsPrompt () {
@@ -318,7 +276,7 @@ function onAnswer (question) {
         if (settings.authentication.discord.token.length > 0) return attemptLogin(settings.authentication.discord.token)
         else return prompts.next(questions.loginQuestion)
       } else {
-        ui.log.write(red('ToS not accepted, aborting script.'))
+        log({ type: 'error', message: 'ToS not accepted, aborting script.' }, settings, ui)
         process.exit()
       }
       break
@@ -346,7 +304,7 @@ function onAnswer (question) {
       const dms = [...new Set(answer.filter(choice => choice.type === 'dm').map(dm => dm.id).flat())]
       settings.archiving.GROUPS = groups.length > 0 ? groups : []
       settings.archiving.DIRECTMESSAGES = dms.length > 0 ? dms : []
-      settings.archiving.GUILDS = {}
+      settings.archiving.GUILDS = settings.archiving.GUILDS || {}
       if (guilds.length > 0) {
         return listGuildChannelsPrompt(guilds)
       } else {
@@ -376,32 +334,24 @@ function onAnswer (question) {
     }
     case 'saveSettings':
       if (answer) {
-        if (settings.debug) ui.log.write(`${gray('Debug:')} ${gray(bold('Creating backup file of existing settings file.'))}`)
+        log({ type: 'debug', message: 'Creating backup file of existing settings file.' }, settings, ui)
         if (!fs.existsSync(path.join(__dirname, 'settings.json.bkp'))) fs.writeFileSync(path.join(__dirname, 'settings.json.bkp'), JSON.stringify(require('./settings.json'), null, 2))
-        if (settings.debug) ui.log.write(`${gray('Debug:')} ${gray(bold('Writing new data to settings file.'))}`)
+        log({ type: 'debug', message: 'Writing new data to settings file.' }, settings, ui)
         saveSettings(settings)
       }
       return start()
   }
 }
 
-function start () {
+async function start () {
   const date = Date.now()
-  ui.updateBottomBar(`${green(bold('Next archive at'))} ${green(bold(underline(settings.archiving.auto.enabled ? cronParser.parseExpression(settings.archiving.auto.cronSchedule).next().toString() : new Date(date).toString())))}${green(bold('.'))}`)
-  setTimeout(() => {
-    archive({ discord, settings, ui, colors: { red, blue, green, underline, bold, gray }, date, rimraf, fetch, fs, writeFile, path }).then(() => {
-      // All done.
-      ui.log.write(`${green(bold(`Done! It took around ${Number(((Date.now() - date) / 1000) / 60).toFixed(0)} minutes to finish.`))}`)
 
-      if (settings.archiving.auto.enabled) {
-        ui.updateBottomBar(`${green(bold('Next archive at'))} ${green(bold(underline(cronParser.parseExpression(settings.archiving.auto.cronSchedule).next().toString())))}${green(bold('.'))}`)
-        setTimeout(() => {
-          start()
-        }, new Date(cronParser.parseExpression(settings.archiving.auto.cronSchedule).next()) - Date.now())
-      } else {
-        ui.updateBottomBar(`${green(bold('Thank you for using DARAH.'))}`)
-        process.exit()
-      }
-    })
-  }, settings.archiving.auto.enabled ? new Date(cronParser.parseExpression(settings.archiving.auto.cronSchedule).next()) - Date.now() : 0)
+  await archive({ discord, settings, ui, date, rimraf, fetch, fs, writeFile, path, log })
+
+  // All done.
+  log({ message: `Done! It took around ${Number(((Date.now() - date) / 1000) / 60).toFixed(0)} minutes to finish.` }, settings, ui)
+  log({ type: 'bar', message: 'Thank you for using DARAH.' }, settings, ui)
+  if (!settings.archiving.auto) process.exit()
+
+  return Promise.resolve()
 }
