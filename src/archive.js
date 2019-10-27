@@ -39,7 +39,7 @@ async function downloadGuildEmoji (object, { emoji, emojisInGuild, id }, { fetch
       const loc = path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[id].type + id, 'Downloads', 'Guild', `${String(emojisInGuild.findIndex(i => i.d === emoji.identifier))}.${type}`)
       if (fs.existsSync(loc)) {
         log({ type: 'debug', message: `Skipping ${String(emojisInGuild.findIndex(i => i.d === emoji.identifier))}.${type} emoji, already downloaded. ( ${emoji.url} )` }, settings, ui)
-        return Promise.resolve()
+        return Promise.resolve(false)
       } else {
         const dest = fs.createWriteStream(loc)
         res.body.pipe(dest)
@@ -49,11 +49,11 @@ async function downloadGuildEmoji (object, { emoji, emojisInGuild, id }, { fetch
           Promise.resolve(true)
         })
       }
-    } else return Promise.resolve() // Whatever, couldn't get it.
+    } else return Promise.resolve(false) // Whatever, couldn't get it.
   } catch (e) {
     if (settings.debug) console.error(e)
     log({ type: 'error', message: `(${e.message}) Failed to download guild emoji ${emojisInGuild.findIndex(i => i.d === emoji.identifier)}, for ${id}.` }, settings, ui)
-    return Promise.resolve() // We failed, tell user.
+    return Promise.resolve(false) // We failed, tell user.
   }
 }
 
@@ -76,7 +76,7 @@ async function downloadGuildIcon (object, id, { fetch, fs, path, log, settings, 
       const loc = path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[id].type + id, 'Downloads', 'Guild', `icon.${type}`)
       if (fs.existsSync(loc)) {
         log({ type: 'debug', message: `Skipping guild icon.${type}, already downloaded. ( ${object[id].g.u} )` }, settings, ui)
-        return Promise.resolve()
+        return Promise.resolve(false)
       } else {
         const dest = fs.createWriteStream(loc)
         res.body.pipe(dest)
@@ -86,11 +86,11 @@ async function downloadGuildIcon (object, id, { fetch, fs, path, log, settings, 
           Promise.resolve(true)
         })
       }
-    } else return Promise.resolve() // Whatever, couldn't get it.
+    } else return Promise.resolve(false) // Whatever, couldn't get it.
   } catch (e) {
     if (settings.debug) console.error(e)
     log({ type: 'error', message: `(${e.message}) Failed to download guild icon for ${id}.` }, settings, ui)
-    return Promise.resolve() // We failed, tell user.
+    return Promise.resolve(false) // We failed, tell user.
   }
 }
 
@@ -121,7 +121,7 @@ async function downloadAttachment (object, { attachment, channel, id }, { fetch,
         const loc = path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[id].type + id, 'Downloads', 'Channels', String(channel.calculatedPosition || '0'), `[${attachment.id}]${object[id].o.information.name ? `${attachment.filename}` : `.${extension}`}`)
         if (fs.existsSync(loc)) {
           log({ type: 'debug', message: `Skipping attachment ${attachment.id}, already downloaded. ( ${attachment.url} )` }, settings, ui)
-          return Promise.resolve()
+          return Promise.resolve(false)
         } else {
           const dest = fs.createWriteStream(loc)
           res.body.pipe(dest)
@@ -131,12 +131,12 @@ async function downloadAttachment (object, { attachment, channel, id }, { fetch,
             Promise.resolve(true)
           })
         }
-      } else return Promise.resolve() // Not downloading.
-    } else return Promise.resolve() // Whatever, couldn't get it.
+      } else return Promise.resolve(false) // Not downloading.
+    } else return Promise.resolve(false) // Whatever, couldn't get it.
   } catch (e) {
     if (settings.debug) console.error(e)
     log({ type: 'error', message: `(${e.message}) Failed to download attachment ${attachment.id}, for ${id}.` }, settings, ui)
-    return Promise.resolve() // We failed, tell user.
+    return Promise.resolve(false) // We failed, tell user.
   }
 }
 
@@ -159,7 +159,7 @@ async function downloadEmoji (object, { reaction, id }, { fetch, fs, path, log, 
       const loc = path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[id].type + id, 'Downloads', 'Emojis', `${String(object[id].e.findIndex(i => i.d === reaction.emoji.identifier))}.${type}`)
       if (fs.existsSync(loc)) {
         log({ type: 'debug', message: `Skipping emoji ${object[id].e.findIndex(i => i.d === reaction.emoji.identifier)}, already downloaded. ( ${reaction.emoji.url || `https://cdn.discordapp.com/emojis/${reaction.emoji.id}.${reaction.emoji.animated ? 'gif' : 'png'}`} )` }, settings, ui)
-        return Promise.resolve()
+        return Promise.resolve(false)
       } else {
         const dest = fs.createWriteStream(loc)
         res.body.pipe(dest)
@@ -169,11 +169,11 @@ async function downloadEmoji (object, { reaction, id }, { fetch, fs, path, log, 
           Promise.resolve(true)
         })
       }
-    } else return Promise.resolve() // Whatever, couldn't get it.
+    } else return Promise.resolve(false) // Whatever, couldn't get it.
   } catch (e) {
     if (settings.debug) console.error(e)
     log({ type: 'error', message: `(${e.message}) Failed to download emoji ${object[id].e.findIndex(i => i.d === reaction.emoji.identifier)}, for ${id}.` }, settings, ui)
-    return Promise.resolve() // We failed, tell user.
+    return Promise.resolve(false) // We failed, tell user.
   }
 }
 
@@ -196,7 +196,7 @@ async function downloadUserAvatar (object, { user, id }, { fetch, fs, path, log,
       const loc = path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[id].type + id, 'Downloads', 'Users', `${String(object[id].u.findIndex(i => i.i === user.id))}.${type}`)
       if (fs.existsSync(loc)) {
         log({ type: 'debug', message: `Skipping user avatar ${object[id].u.findIndex(i => i.i === user.id)}, already downloaded. ( ${user.avatarURL || user.displayAvatarURL} )` }, settings, ui)
-        return Promise.resolve()
+        return Promise.resolve(false)
       } else {
         const dest = fs.createWriteStream(loc)
         res.body.pipe(dest)
@@ -206,11 +206,11 @@ async function downloadUserAvatar (object, { user, id }, { fetch, fs, path, log,
           Promise.resolve(true)
         })
       }
-    } else return Promise.resolve() // Whatever, couldn't get it.
+    } else return Promise.resolve(false) // Whatever, couldn't get it.
   } catch (e) {
     if (settings.debug) console.error(e)
     log({ type: 'error', message: `(${e.message}) Failed to download user avatar ${object[id].u.findIndex(i => i.i === user.id)}, for ${id}.` }, settings, ui)
-    return Promise.resolve() // We failed, tell user.
+    return Promise.resolve(false) // We failed, tell user.
   }
 }
 

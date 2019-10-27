@@ -947,7 +947,12 @@ async function loadInstances ({ discord, settings, ui, date, rimraf, fetch, fs, 
 
       // If fullArchive is true, take archive from now to beginning.
       const useCacheMsgIDIfAllowed = channelOptions.fullArchive ? null : channelCache[id][channel.id].lastMsgId
-      await fetchMessages(channel, useBackupMsgIDIfExists, useBackupMsgIDIfExists ? null : useCacheMsgIDIfAllowed)
+      if (!channelCache[id][channel.id].finished) {
+        await fetchMessages(channel, useBackupMsgIDIfExists, useBackupMsgIDIfExists ? null : useCacheMsgIDIfAllowed)
+      } else {
+        log({ message: `Skipping ${channel.id}, already finished.` }, settings, ui)
+        return Promise.resolve()
+      }
     }
 
     // Do first instance & auxilliary collecting.
