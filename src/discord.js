@@ -2,6 +2,7 @@
  * DISCORD
  * Data gathering from Discord happens here.
  */
+'use strict'
 
 const compression = require('./compress')
 
@@ -20,11 +21,103 @@ const deletedMessages = {}
 const object = {}
 const channelCache = {}
 
+let stop = false
+
+let messages = {
+  m: [],
+  id: null
+}
+
 const channelTitle = (channel) => channel.type === 'text' ? `guild ${channel.guild.name}, channel` : channel.type === 'dm' ? 'DM, channel' : 'group DM, channel'
 const channelName = (channel) => channel.name || (channel.recipient ? channel.recipient.username : channel.recipients.map(user => user.username).join(', '))
 
 // Load in guilds & user DMs
-async function loadInstances ({ discord, settings, ui, date, rimraf, fetch, fs, writeFile, path, log }) {
+async function loadInstances ({ discord, settings, ui, date, rimraf, fetch, fs, writeFile, path, log, backup }) {
+  async function doABackup () {
+    const crashBackupPath = path.join(__dirname, '..', 'crash_backup.json')
+
+    let previousBackup
+    if (fs.existsSync(crashBackupPath)) previousBackup = require(crashBackupPath)
+
+    // Write a backup file for resuming archiving.
+    const backup = {
+      GUILDS: {},
+      GROUPS: {},
+      DIRECTMESSAGES: {}
+    }
+
+    const guilds = Object.keys(settings.archiving.GUILDS)
+    for (let i = 0; i < guilds.length; i++) {
+      const guildID = guilds[i]
+      backup.GUILDS[guildID] = {}
+
+      for (let ii = 0; ii < settings.archiving.GUILDS[guildID].length; ii++) {
+        const channelID = settings.archiving.GUILDS[guildID][ii]
+        if (object[guildID] && object[guildID].ca[channelID]) {
+          if (!object[guildID].ca[channelID].lastSplitMsg) object[guildID].ca[channelID].count = 0
+          else if (messages.id === channelID) object[guildID].ca[channelID].count -= messages.m.length
+          backup.GUILDS[guildID][channelID] = (previousBackup && previousBackup.GUILDS[guildID] && previousBackup.GUILDS[guildID][channelID] && typeof previousBackup.GUILDS[guildID][channelID].count === 'number' && previousBackup.GUILDS[guildID][channelID].count > object[guildID].ca[channelID].count)
+            ? previousBackup.GUILDS[guildID][channelID]
+            : object[guildID].ca[channelID]
+        } else {
+          backup.GUILDS[guildID][channelID] = (previousBackup && previousBackup.GUILDS[guildID] && previousBackup.GUILDS[guildID][channelID])
+            ? previousBackup.GUILDS[guildID][channelID]
+            : { finished: false }
+        }
+      }
+
+      const tempDir = path.join(settings.archiving.tempDir, 'DARAH_TEMP', `[GUILD]${guildID}`)
+      if (fs.existsSync(tempDir)) await writeFile(path.join(tempDir.toString(), 'crash_backup_object.json'), JSON.stringify(object[guildID]))
+    }
+
+    for (let index = 0; index < settings.archiving.GROUPS.length; index++) {
+      const groupID = settings.archiving.GROUPS[index]
+      if (object[groupID]) {
+        if (!object[groupID].ca[groupID].lastSplitMsg) object[groupID].ca[groupID].count = 0
+        else if (messages.id === groupID) object[groupID].ca[groupID].count -= messages.m.length
+        backup.GROUPS[groupID] = (previousBackup && previousBackup.GROUPS[groupID] && typeof previousBackup.GROUPS[groupID].count === 'number' && previousBackup.GROUPS[groupID].count > object[groupID].ca[groupID].count)
+          ? previousBackup.GROUPS[groupID]
+          : object[groupID]
+      } else {
+        backup.GROUPS[groupID] = (previousBackup && previousBackup.GROUPS[groupID])
+          ? previousBackup.GROUPS[groupID]
+          : { finished: false }
+      }
+
+      const tempDir = path.join(settings.archiving.tempDir, 'DARAH_TEMP', `[GROUP]${groupID}`)
+      if (fs.existsSync(tempDir)) await writeFile(path.join(tempDir.toString(), 'crash_backup_object.json'), JSON.stringify(object[groupID]))
+    }
+
+    for (let index = 0; index < settings.archiving.DIRECTMESSAGES.length; index++) {
+      const recipientID = settings.archiving.DIRECTMESSAGES[index]
+      if (object[recipientID]) {
+        const channelID = Object.keys(object[recipientID].ca)[0]
+        if (!object[recipientID].ca[channelID].lastSplitMsg) object[recipientID].ca[channelID].count = 0
+        else if (messages.id === channelID) object[recipientID].ca[channelID].count -= messages.m.length
+        backup.DIRECTMESSAGES[recipientID] = (previousBackup && previousBackup.DIRECTMESSAGES[recipientID] && typeof previousBackup.DIRECTMESSAGES[recipientID].count === 'number' && previousBackup.DIRECTMESSAGES[recipientID].count > object[recipientID].ca[channelID].count)
+          ? previousBackup.DIRECTMESSAGES[recipientID]
+          : object[recipientID]
+      } else {
+        backup.DIRECTMESSAGES[recipientID] = (previousBackup && previousBackup.DIRECTMESSAGES[recipientID])
+          ? previousBackup.DIRECTMESSAGES[recipientID]
+          : { finished: false }
+      }
+
+      const tempDir = path.join(settings.archiving.tempDir, 'DARAH_TEMP', `[DM]${recipientID}`)
+      if (fs.existsSync(tempDir)) await writeFile(path.join(tempDir.toString(), 'crash_backup_object.json'), JSON.stringify(object[recipientID]))
+    }
+
+    await writeFile(crashBackupPath, JSON.stringify(backup))
+    log({ type: 'error', message: 'ERROR, CREATING CRASH BACKUP. FIX ERROR AND RERUN SCRIPT.' }, settings, ui)
+    return Promise.resolve()
+  }
+
+  discord.on('error', async (e) => {
+    console.log(e)
+    await doABackup()
+    process.exit()
+  })
+
   const types = [
     ['guilds', Object.entries(settings.archiving.GUILDS)],
     ['groups', settings.archiving.GROUPS],
@@ -47,9 +140,13 @@ async function loadInstances ({ discord, settings, ui, date, rimraf, fetch, fs, 
         if (await checkIfExistsOrCreate({ fs, path }, settings.archiving.tempDir, 'DARAH_TEMP', '[GUILD]' + typeArray[0]) === 'created') {
           log({ type: 'debug', message: `Created cache directory for ${typeArray[0]} guild.` }, settings, ui)
         } else {
-          // Purge & Create directory
-          await purgeAndCreate({ fs, path, rimraf }, settings.archiving.tempDir, 'DARAH_TEMP', '[GUILD]' + typeArray[0])
-          log({ type: 'debug', message: `Recreated cache directory for ${typeArray[0]} guild.` }, settings, ui)
+          if (backup && backup.GUILDS[typeArray[0]]) {
+            log({ type: 'debug', message: `Skipping purge for ${typeArray[0]} guild, found entry in crash backup.` }, settings, ui)
+          } else {
+            // Purge & Create directory
+            await purgeAndCreate({ fs, path, rimraf }, settings.archiving.tempDir, 'DARAH_TEMP', '[GUILD]' + typeArray[0])
+            log({ type: 'debug', message: `Recreated cache directory for ${typeArray[0]} guild.` }, settings, ui)
+          }
         }
         channelCache[typeArray[0]] = {}
       }
@@ -66,9 +163,13 @@ async function loadInstances ({ discord, settings, ui, date, rimraf, fetch, fs, 
             if (await checkIfExistsOrCreate({ fs, path }, settings.archiving.tempDir, 'DARAH_TEMP', '[GROUP]' + channel.id) === 'created') {
               log({ type: 'debug', message: `Created cache directory for ${channel.id} group channel.` }, settings, ui)
             } else {
-              // Purge & Create directory
-              await purgeAndCreate({ fs, path, rimraf }, settings.archiving.tempDir, 'DARAH_TEMP', '[GROUP]' + channel.id)
-              log({ type: 'debug', message: `Recreated cache directory for ${channel.id} group channel.` }, settings, ui)
+              if (backup && backup.GROUPS[channel.id]) {
+                log({ type: 'debug', message: `Skipping purge for ${channel.id} group, found entry in crash backup.` }, settings, ui)
+              } else {
+                // Purge & Create directory
+                await purgeAndCreate({ fs, path, rimraf }, settings.archiving.tempDir, 'DARAH_TEMP', '[GROUP]' + channel.id)
+                log({ type: 'debug', message: `Recreated cache directory for ${channel.id} group channel.` }, settings, ui)
+              }
             }
             channelCache[channel.id] = {}
           } else if (type[0] === 'dms') {
@@ -79,9 +180,13 @@ async function loadInstances ({ discord, settings, ui, date, rimraf, fetch, fs, 
             if (await checkIfExistsOrCreate({ fs, path }, settings.archiving.tempDir, 'DARAH_TEMP', '[DM]' + channel.recipient.id) === 'created') {
               log({ type: 'debug', message: `Created cache directory for ${channel.recipient.id} dm channel.` }, settings, ui)
             } else {
-              // Purge & Create directory
-              await purgeAndCreate({ fs, path, rimraf }, settings.archiving.tempDir, 'DARAH_TEMP', '[DM]' + channel.recipient.id)
-              log({ type: 'debug', message: `Recreated cache directory for ${channel.recipient.id} dm channel.` }, settings, ui)
+              if (backup && backup.GUILDS[channel.recipient.id]) {
+                log({ type: 'debug', message: `Skipping purge for ${channel.recipient.id} dm, found entry in crash backup.` }, settings, ui)
+              } else {
+                // Purge & Create directory
+                await purgeAndCreate({ fs, path, rimraf }, settings.archiving.tempDir, 'DARAH_TEMP', '[DM]' + channel.recipient.id)
+                log({ type: 'debug', message: `Recreated cache directory for ${channel.recipient.id} dm channel.` }, settings, ui)
+              }
             }
             channelCache[channel.recipient.id] = {}
           }
@@ -92,11 +197,16 @@ async function loadInstances ({ discord, settings, ui, date, rimraf, fetch, fs, 
         try {
           await start({ channel })
         } catch (e) {
-          console.error(e)
-          process.exit()
+          stop = true
+          break
+          // console.error(e)
+          // await doABackup()
+          // process.exit()
         }
       }
+      if (stop) break
     }
+    if (stop) break
 
     log({ type: 'debug', message: `Done with ${type[0]}.` }, settings, ui)
   }
@@ -108,7 +218,7 @@ async function loadInstances ({ discord, settings, ui, date, rimraf, fetch, fs, 
       let id // Id for object.
 
       // Keep all messages in this one variable.
-      let messages = {
+      messages = {
         m: []
       }
 
@@ -123,15 +233,19 @@ async function loadInstances ({ discord, settings, ui, date, rimraf, fetch, fs, 
           nextCount: channelOptions.everyMessages,
           count: 0,
           atSplit: 0,
-          lastMsgId: null
+          lastSplitMsg: null,
+          lastMsgId: null,
+          finished: false
         }
         directory = path.join(settings.archiving.archiveDir, 'DARAH_ARCHIVES', '[GUILD]' + channel.guild.id)
         if (!settings.archiving.overrule && fs.existsSync(path.join(directory, 'settings.json'))) {
           channelOptions = require(path.join(directory, 'settings.json'))
           if (!channelOptions.fullArchive) channelCache[channel.guild.id][channel.id] = require(path.join(directory, 'cache.json'))[channel.id]
         }
-        id = channel.guild.id
 
+        if (backup && backup.GUILDS[channel.guild.id] && backup.GUILDS[channel.guild.id][channel.id] && typeof backup.GUILDS[channel.guild.id][channel.id].count === 'number') channelCache[channel.guild.id][channel.id] = backup.GUILDS[channel.guild.id][channel.id]
+
+        id = channel.guild.id
         if (!object[id]) {
           object[id] = {
             ca: {},
@@ -270,19 +384,27 @@ async function loadInstances ({ discord, settings, ui, date, rimraf, fetch, fs, 
               } : undefined
           }
           if (channelOptions.downloads.icons && channelOptions.information.icon && object[id].g.u) promises.push(downloadGuildIcon(object, id, { fetch, fs, path, log, settings, ui }))
+
+          const backup = path.join(settings.archiving.tempDir, 'DARAH_TEMP', `[GUILD]${id}`, 'crash_backup_object.json')
+          if (fs.existsSync(backup)) object[id] = require(backup)
         }
       } else if (channel.type === 'dm') {
         channelCache[channel.recipient.id][channel.id] = {
           nextCount: channelOptions.everyMessages,
           count: 0,
           atSplit: 0,
-          lastMsgId: null
+          lastSplitMsg: null,
+          lastMsgId: null,
+          finished: false
         }
         directory = path.join(settings.archiving.archiveDir, 'DARAH_ARCHIVES', '[DM]' + channel.recipient.id)
         if (!settings.archiving.overrule && fs.existsSync(path.join(directory, 'settings.json'))) {
           channelOptions = require(path.join(directory, 'settings.json'))
           if (!channelOptions.fullArchive) channelCache[channel.recipient.id][channel.id] = require(path.join(directory, 'cache.json'))[channel.id]
         }
+
+        if (backup && backup.DIRECTMESSAGES[channel.recipient.id] && typeof backup.DIRECTMESSAGES[channel.recipient.id].count === 'number') channelCache[channel.recipient.id][channel.id] = backup.DIRECTMESSAGES[channel.recipient.id]
+
         id = channel.recipient.id
         if (!object[id]) {
           object[id] = {
@@ -300,7 +422,6 @@ async function loadInstances ({ discord, settings, ui, date, rimraf, fetch, fs, 
           if (channelOptions.members.name && channel.nicks) {
             nicks = {}
             channel.nicks.map(recipient => {
-              console.log(recipient)
               nicks[recipient[0]] = recipient[1]
             })
           }
@@ -335,19 +456,27 @@ async function loadInstances ({ discord, settings, ui, date, rimraf, fetch, fs, 
                 }
               : undefined
           }
+
+          const backup = path.join(settings.archiving.tempDir, 'DARAH_TEMP', `[DM]${id}`, 'crash_backup_object.json')
+          if (fs.existsSync(backup)) object[id] = require(backup)
         }
       } else if (channel.type === 'group') {
         channelCache[channel.id][channel.id] = {
           nextCount: channelOptions.everyMessages,
           count: 0,
           atSplit: 0,
-          lastMsgId: null
+          lastSplitMsg: null,
+          lastMsgId: null,
+          finished: false
         }
         directory = path.join(settings.archiving.archiveDir, 'DARAH_ARCHIVES', '[GROUP]' + channel.id)
         if (!settings.archiving.overrule && fs.existsSync(path.join(directory, 'settings.json'))) {
           channelOptions = require(path.join(directory, 'settings.json'))
           if (!channelOptions.fullArchive) channelCache[channel.id][channel.id] = require(path.join(directory, 'cache.json'))[channel.id]
         }
+
+        if (backup && backup.GROUPS[channel.id] && typeof backup.GROUPS[channel.id].count === 'number') channelCache[channel.id][channel.id] = backup.GROUPS[channel.id]
+
         id = channel.id
         if (!object[id]) {
           object[id] = {
@@ -399,6 +528,9 @@ async function loadInstances ({ discord, settings, ui, date, rimraf, fetch, fs, 
                 }
               : undefined
           }
+
+          const backup = path.join(settings.archiving.tempDir, 'DARAH_TEMP', `[GROUP]${id}`, 'crash_backup_object.json')
+          if (fs.existsSync(backup)) object[id] = require(backup)
         }
       }
 
@@ -726,22 +858,24 @@ async function loadInstances ({ discord, settings, ui, date, rimraf, fetch, fs, 
           // Check how many messages we've collected so far.
           if (!object[id].count) object[id].count = { messages: 0, downloads: 0 }
 
-          object[id].count.downloads += res.length
+          object[id].count.downloads += res.filter(Boolean).length
 
           if (channelCache[id][channel.id].count >= channelCache[id][channel.id].nextCount) {
-            channelCache[id][channel.id].nextCount += channelCache[id][channel.id].everyMessages
+            channelCache[id][channel.id].nextCount += channelOptions.everyMessages
             channelCache[id][channel.id].atSplit++
-
             object[id].count.messages += messages.m.length
 
             messages.po = channel.calculatedPosition || 0
+
+            // For crash backup.
+            channelCache[id][channel.id].lastSplitMsg = channelCache[id][channel.id].lastMsgId
 
             promises = [] // Clear
 
             // Create file.
             await writeFile(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[id].type + id, `[CHANNEL]${channelOptions.channels.name ? (channel.name || channel.recipient.username) : channel.calculatedPosition}(${channel.calculatedPosition || '0'})_${channelCache[id][channel.id].atSplit}.json`), JSON.stringify(messages, null, channelOptions.output.formatted ? channelOptions.output.whiteSpace : 0))
 
-            messages = { m: [] } // RESET
+            messages = { m: [], id: channel.id } // RESET
 
             log({ message: `Dumping collected data for ${channel.id} in file, currently at split ${channelCache[id][channel.id].atSplit}.` }, settings, ui)
             return fetchMessages(channel, after ? null : msgLast.id, after ? msgFirst.id : null)
@@ -758,9 +892,8 @@ async function loadInstances ({ discord, settings, ui, date, rimraf, fetch, fs, 
 
           if (!object[id].count) object[id].count = { messages: 0, downloads: 0 }
 
-          object[id].count.downloads += res.length
+          object[id].count.downloads += res.filter(Boolean).length
 
-          // No messages
           if ((deletedMessages[channel.id] && deletedMessages[channel.id].length > 0) || messages.m.length > 0) {
             object[id].count.messages += messages.m.length
 
@@ -777,19 +910,27 @@ async function loadInstances ({ discord, settings, ui, date, rimraf, fetch, fs, 
             if (messages.m.length === 0) delete messages.m
 
             channelCache[id][channel.id].atSplit++
+            channelCache[id][channel.id].finished = true
+
+            // For crash backup.
+            channelCache[id][channel.id].lastSplitMsg = channelCache[id][channel.id].lastMsgId
 
             promises = [] // Clear
 
             // Create file.
             await writeFile(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[id].type + id, `[CHANNEL]${channelOptions.channels.name ? (channel.name || channel.recipient.username) : channel.calculatedPosition}(${channel.calculatedPosition || '0'})_${channelCache[id][channel.id].atSplit}.json`), JSON.stringify(messages, null, channelOptions.output.formatted ? channelOptions.output.whiteSpace : 0))
-            messages = { m: [] } // RESET
+            messages = { m: [], id: channel.id } // RESET
 
             // Update cache
             object[id].ca = channelCache[id]
 
             return Promise.resolve()
           } else {
+            // No messages
+
             // Update cache
+            channelCache[id][channel.id].finished = true
+            channelCache[id][channel.id].lastSplitMsg = channelCache[id][channel.id].lastMsgId
             object[id].ca = channelCache[id]
 
             promises = [] // Clear
@@ -799,13 +940,21 @@ async function loadInstances ({ discord, settings, ui, date, rimraf, fetch, fs, 
         }
       }
 
+      messages.id = channel.id
+
+      // If we're recovering from a backup, use last split message id.
+      const useBackupMsgIDIfExists = (channelCache[id] && channelCache[id][channel.id]) ? channelCache[id][channel.id].lastSplitMsg : null
+
       // If fullArchive is true, take archive from now to beginning.
-      await fetchMessages(channel, null, channelOptions.fullArchive ? null : channelCache[id][channel.id].lastMsgId)
+      const useCacheMsgIDIfAllowed = channelOptions.fullArchive ? null : channelCache[id][channel.id].lastMsgId
+      await fetchMessages(channel, useBackupMsgIDIfExists, useBackupMsgIDIfExists ? null : useCacheMsgIDIfAllowed)
     }
 
     // Do first instance & auxilliary collecting.
     await readChannel(channel)
   }
+
+  if (stop) return Promise.resolve('error')
 
   const objects = Object.entries(object)
   for (let index = 0; index < objects.length; index++) {
@@ -887,6 +1036,9 @@ async function loadInstances ({ discord, settings, ui, date, rimraf, fetch, fs, 
       // Dump object[string].u into file.
       fs.writeFileSync(path.join(tempDir, '[INFO]users.json'), JSON.stringify(c.u, null, c.o.output.formatted ? c.o.output.whiteSpace : 0))
       log({ type: 'debug', message: `Appending users file for ${i[0]}.` }, settings, ui)
+
+      // Remove backup object.
+      if (fs.existsSync(path.join(tempDir.toString(), 'crash_backup_object.json'))) fs.unlinkSync(path.join(tempDir.toString(), 'crash_backup_object.json'))
 
       log({ message: `Archived ${c.count.messages} messages & downloaded ${c.count.downloads} files, for ${i[0]}.` }, settings, ui)
     } else log({ message: `No (new) messages for ${i[0]}.` }, settings, ui)

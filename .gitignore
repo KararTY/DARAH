@@ -28,3 +28,6 @@ DARAH_TEMP/**/*
 # Settings
 # settings.json
 settings.json.bkp
+
+# Crash backup files
+crash_backup.json

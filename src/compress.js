@@ -2,6 +2,7 @@
  * COMPRESS
  * Compresses archive and appends it to archiving directory.
  */
+'use strict'
 
 function writeStream (stream) {
   return new Promise((resolve) => {
@@ -40,6 +41,8 @@ async function compress ({ object, settings, ui, date, fs, path, log }) {
       log({ message: `Skipping compression for ${channels[index]}.` }, settings, ui)
       if (index < channels.length) log({ type: 'bar', message: 'Compressing next folder...' }, settings, ui)
     }
+
+    if (fs.existsSync(path.join(__dirname, '..', 'crash_backup.json'))) fs.unlinkSync(path.join(__dirname, '..', 'crash_backup.json'))
   }
 
   return Promise.resolve()

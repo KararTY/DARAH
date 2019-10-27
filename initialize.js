@@ -2,6 +2,7 @@
  * INITIALIZE
  * Initialization is easy, validate settings file and request more information if insufficient.
  */
+'use strict'
 
 const {
   colors: {
@@ -31,6 +32,8 @@ const archive = require('./src/discord.js')
 
 const ui = new cli.ui.BottomBar()
 const prompts = new Subject()
+
+let crashBackup
 
 cli.prompt(prompts).ui.process.subscribe({
   next: onAnswer,
@@ -109,8 +112,9 @@ function attemptLogin (answer) {
   log({ message: 'Attempting to authenticate...' }, settings, ui)
   discord.once('ready', () => {
     log({ message: 'Discord account authenticated.' }, settings, ui)
-    if (settings.archiving.archiveDir.length === 0 || !fs.existsSync(path.join(settings.archiving.archiveDir)) || fs.accessSync(path.join(settings.archiving.archiveDir), fs.constants.R_OK | fs.constants.W_OK) !== undefined) prompts.next(questions.inputDirectory)
-    else if (settings.archiving.tempDir.length === 0 || !fs.existsSync(path.join(settings.archiving.tempDir)) || fs.accessSync(path.join(settings.archiving.tempDir), fs.constants.R_OK | fs.constants.W_OK) !== undefined) prompts.next(questions.temporaryDirectory)
+    if (settings.archiving.archiveDir.length === 0 || !fs.existsSync(path.join(settings.archiving.archiveDir, 'DARAH_ARCHIVES')) || fs.accessSync(path.join(settings.archiving.archiveDir), fs.constants.R_OK | fs.constants.W_OK) !== undefined) prompts.next(questions.inputDirectory)
+    else if (settings.archiving.tempDir.length === 0 || !fs.existsSync(path.join(settings.archiving.tempDir, 'DARAH_TEMP')) || fs.accessSync(path.join(settings.archiving.tempDir), fs.constants.R_OK | fs.constants.W_OK) !== undefined) prompts.next(questions.temporaryDirectory)
+    else if (crashBackup) start()
     else listGuildsPrompt()
   }).login(answer).catch((e) => {
     if (settings.debug) console.error(e)
@@ -124,11 +128,31 @@ if (settings.archiving.auto) {
   log({ message: 'Auto archiving enabled...' }, settings, ui)
   discord.login(settings.authentication.discord.token).catch(e => { console.error(e); process.exit(1) })
   discord.once('ready', async () => {
-    await start()
-    log({ message: 'Done with the auto archiving.' }, settings, ui)
-    process.exit()
+    const res = await start()
+    if (res !== 'error') {
+      log({ message: 'Done with the auto archiving.' }, settings, ui)
+      process.exit()
+    } else console.log('Something went wrong, creating crash backup file...')
   })
-} else prompts.next(questions.firstStart)
+} else {
+  // Check for crash backup
+  if (fs.existsSync(path.join(__dirname, 'crash_backup.json'))) {
+    log({ message: 'Detecting crash backup...' }, settings, ui)
+    crashBackup = require('./crash_backup.json')
+
+    // settings.archiving.GUILDS = crashBackup.GUILDS
+    const guilds = Object.keys(crashBackup.GUILDS)
+    for (let index = 0; index < guilds.length; index++) {
+      const guildID = guilds[index]
+      settings.archiving.GUILDS[guildID] = Object.keys(crashBackup.GUILDS[guildID])
+    }
+
+    settings.archiving.GROUPS = Object.keys(crashBackup.GROUPS)
+    settings.archiving.DIRECTMESSAGES = Object.keys(crashBackup.DIRECTMESSAGES)
+
+    prompts.next(questions.loginQuestion)
+  } else prompts.next(questions.firstStart)
+}
 
 function listGuildsPrompt () {
   const prompt = {
@@ -346,12 +370,14 @@ function onAnswer (question) {
 async function start () {
   const date = Date.now()
 
-  await archive({ discord, settings, ui, date, rimraf, fetch, fs, writeFile, path, log })
+  const res = await archive({ backup: crashBackup, discord, settings, ui, date, rimraf, fetch, fs, writeFile, path, log })
 
-  // All done.
-  log({ message: `Done! It took around ${Number(((Date.now() - date) / 1000) / 60).toFixed(0)} minutes to finish.` }, settings, ui)
-  log({ type: 'bar', message: 'Thank you for using DARAH.' }, settings, ui)
-  if (!settings.archiving.auto) process.exit()
+  if (res !== 'error') {
+    // All done.
+    log({ message: `Done! It took around ${Number(((Date.now() - date) / 1000) / 60).toFixed(0)} minutes to finish.` }, settings, ui)
+    log({ type: 'bar', message: 'Thank you for using DARAH.' }, settings, ui)
+    if (!settings.archiving.auto) process.exit()
 
-  return Promise.resolve()
+    return Promise.resolve()
+  } else return Promise.resolve(res)
 }
