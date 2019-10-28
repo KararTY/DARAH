@@ -34,6 +34,7 @@ const ui = new cli.ui.BottomBar()
 const prompts = new Subject()
 
 let crashBackup
+let crashBackupMessages
 
 cli.prompt(prompts).ui.process.subscribe({
   next: onAnswer,
@@ -139,6 +140,7 @@ if (settings.archiving.auto) {
   if (fs.existsSync(path.join(__dirname, 'crash_backup.json'))) {
     log({ message: 'Detecting crash backup...' }, settings, ui)
     crashBackup = require('./crash_backup.json')
+    crashBackupMessages = require('./crash_backup_messages.json')
 
     // settings.archiving.GUILDS = crashBackup.GUILDS
     const guilds = Object.keys(crashBackup.GUILDS)
@@ -370,7 +372,7 @@ function onAnswer (question) {
 async function start () {
   const date = Date.now()
 
-  const res = await archive({ backup: crashBackup, discord, settings, ui, date, rimraf, fetch, fs, writeFile, path, log })
+  const res = await archive({ backup: crashBackup, backupMessages: crashBackupMessages, discord, settings, ui, date, rimraf, fetch, fs, writeFile, path, log })
 
   if (res !== 'error') {
     // All done.

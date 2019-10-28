@@ -21,6 +21,12 @@ const deletedMessages = {}
 const object = {}
 const channelCache = {}
 
+let crashFileManifest = {
+  id: null,
+  attachments: {},
+  emojis: {}
+}
+
 let stop = false
 
 let messages = {
@@ -32,7 +38,7 @@ const channelTitle = (channel) => channel.type === 'text' ? `guild ${channel.gui
 const channelName = (channel) => channel.name || (channel.recipient ? channel.recipient.username : channel.recipients.map(user => user.username).join(', '))
 
 // Load in guilds & user DMs
-async function loadInstances ({ discord, settings, ui, date, rimraf, fetch, fs, writeFile, path, log, backup }) {
+async function loadInstances ({ discord, settings, ui, date, rimraf, fetch, fs, writeFile, path, log, backup, backupMessages }) {
   async function doABackup () {
     const crashBackupPath = path.join(__dirname, '..', 'crash_backup.json')
 
@@ -43,7 +49,8 @@ async function loadInstances ({ discord, settings, ui, date, rimraf, fetch, fs, 
     const backup = {
       GUILDS: {},
       GROUPS: {},
-      DIRECTMESSAGES: {}
+      DIRECTMESSAGES: {},
+      crashFileManifest: {}
     }
 
     const guilds = Object.keys(settings.archiving.GUILDS)
@@ -54,11 +61,10 @@ async function loadInstances ({ discord, settings, ui, date, rimraf, fetch, fs, 
       for (let ii = 0; ii < settings.archiving.GUILDS[guildID].length; ii++) {
         const channelID = settings.archiving.GUILDS[guildID][ii]
         if (object[guildID] && object[guildID].ca[channelID]) {
-          if (!object[guildID].ca[channelID].lastSplitMsg) object[guildID].ca[channelID].count = 0
-          else if (messages.id === channelID) object[guildID].ca[channelID].count -= messages.m.length
           backup.GUILDS[guildID][channelID] = (previousBackup && previousBackup.GUILDS[guildID] && previousBackup.GUILDS[guildID][channelID] && typeof previousBackup.GUILDS[guildID][channelID].count === 'number' && previousBackup.GUILDS[guildID][channelID].count > object[guildID].ca[channelID].count)
             ? previousBackup.GUILDS[guildID][channelID]
             : object[guildID].ca[channelID]
+          if (crashFileManifest.id === channelID) backup.crashFileManifest = crashFileManifest
         } else {
           backup.GUILDS[guildID][channelID] = (previousBackup && previousBackup.GUILDS[guildID] && previousBackup.GUILDS[guildID][channelID])
             ? previousBackup.GUILDS[guildID][channelID]
@@ -73,8 +79,6 @@ async function loadInstances ({ discord, settings, ui, date, rimraf, fetch, fs, 
     for (let index = 0; index < settings.archiving.GROUPS.length; index++) {
       const groupID = settings.archiving.GROUPS[index]
       if (object[groupID]) {
-        if (!object[groupID].ca[groupID].lastSplitMsg) object[groupID].ca[groupID].count = 0
-        else if (messages.id === groupID) object[groupID].ca[groupID].count -= messages.m.length
         backup.GROUPS[groupID] = (previousBackup && previousBackup.GROUPS[groupID] && typeof previousBackup.GROUPS[groupID].count === 'number' && previousBackup.GROUPS[groupID].count > object[groupID].ca[groupID].count)
           ? previousBackup.GROUPS[groupID]
           : object[groupID]
@@ -92,8 +96,6 @@ async function loadInstances ({ discord, settings, ui, date, rimraf, fetch, fs, 
       const recipientID = settings.archiving.DIRECTMESSAGES[index]
       if (object[recipientID]) {
         const channelID = Object.keys(object[recipientID].ca)[0]
-        if (!object[recipientID].ca[channelID].lastSplitMsg) object[recipientID].ca[channelID].count = 0
-        else if (messages.id === channelID) object[recipientID].ca[channelID].count -= messages.m.length
         backup.DIRECTMESSAGES[recipientID] = (previousBackup && previousBackup.DIRECTMESSAGES[recipientID] && typeof previousBackup.DIRECTMESSAGES[recipientID].count === 'number' && previousBackup.DIRECTMESSAGES[recipientID].count > object[recipientID].ca[channelID].count)
           ? previousBackup.DIRECTMESSAGES[recipientID]
           : object[recipientID]
@@ -107,6 +109,7 @@ async function loadInstances ({ discord, settings, ui, date, rimraf, fetch, fs, 
       if (fs.existsSync(tempDir)) await writeFile(path.join(tempDir.toString(), 'crash_backup_object.json'), JSON.stringify(object[recipientID]))
     }
 
+    if (messages.m.length > 0) await writeFile(path.join(__dirname, '..', 'crash_backup_messages.json'), JSON.stringify(messages))
     await writeFile(crashBackupPath, JSON.stringify(backup))
     log({ type: 'error', message: 'ERROR, CREATING CRASH BACKUP. FIX ERROR AND RERUN SCRIPT.' }, settings, ui)
     return Promise.resolve()
@@ -195,16 +198,24 @@ async function loadInstances ({ discord, settings, ui, date, rimraf, fetch, fs, 
         log({ message: `Preparing archiving on ${channelTitle(channel)} ${channelName(channel)}...` }, settings, ui)
 
         try {
+          // Crash backup file manifest.
+          if (backup && backup.crashFileManifest && backup.crashFileManifest.id === channel.id) crashFileManifest = backup.crashFileManifest
+          else crashFileManifest.id = channel.id
+
           await start({ channel })
         } catch (e) {
           stop = true
           break
-          // console.error(e)
-          // await doABackup()
-          // process.exit()
         }
       }
       if (stop) break
+
+      // Reset downloads manifest.
+      crashFileManifest = {
+        id: null,
+        attachments: {},
+        emojis: {}
+      }
     }
     if (stop) break
 
@@ -219,7 +230,8 @@ async function loadInstances ({ discord, settings, ui, date, rimraf, fetch, fs, 
 
       // Keep all messages in this one variable.
       messages = {
-        m: []
+        m: [],
+        id: null
       }
 
       let auxilliaryCounter = 0
@@ -233,7 +245,6 @@ async function loadInstances ({ discord, settings, ui, date, rimraf, fetch, fs, 
           nextCount: channelOptions.everyMessages,
           count: 0,
           atSplit: 0,
-          lastSplitMsg: null,
           lastMsgId: null,
           finished: false
         }
@@ -385,15 +396,14 @@ async function loadInstances ({ discord, settings, ui, date, rimraf, fetch, fs, 
           }
           if (channelOptions.downloads.icons && channelOptions.information.icon && object[id].g.u) promises.push(downloadGuildIcon(object, id, { fetch, fs, path, log, settings, ui }))
 
-          const backup = path.join(settings.archiving.tempDir, 'DARAH_TEMP', `[GUILD]${id}`, 'crash_backup_object.json')
-          if (fs.existsSync(backup)) object[id] = require(backup)
+          const backupObject = path.join(settings.archiving.tempDir, 'DARAH_TEMP', `[GUILD]${id}`, 'crash_backup_object.json')
+          if (fs.existsSync(backupObject)) object[id] = require(backupObject)
         }
       } else if (channel.type === 'dm') {
         channelCache[channel.recipient.id][channel.id] = {
           nextCount: channelOptions.everyMessages,
           count: 0,
           atSplit: 0,
-          lastSplitMsg: null,
           lastMsgId: null,
           finished: false
         }
@@ -457,15 +467,14 @@ async function loadInstances ({ discord, settings, ui, date, rimraf, fetch, fs, 
               : undefined
           }
 
-          const backup = path.join(settings.archiving.tempDir, 'DARAH_TEMP', `[DM]${id}`, 'crash_backup_object.json')
-          if (fs.existsSync(backup)) object[id] = require(backup)
+          const backupObject = path.join(settings.archiving.tempDir, 'DARAH_TEMP', `[DM]${id}`, 'crash_backup_object.json')
+          if (fs.existsSync(backupObject)) object[id] = require(backupObject)
         }
       } else if (channel.type === 'group') {
         channelCache[channel.id][channel.id] = {
           nextCount: channelOptions.everyMessages,
           count: 0,
           atSplit: 0,
-          lastSplitMsg: null,
           lastMsgId: null,
           finished: false
         }
@@ -529,8 +538,8 @@ async function loadInstances ({ discord, settings, ui, date, rimraf, fetch, fs, 
               : undefined
           }
 
-          const backup = path.join(settings.archiving.tempDir, 'DARAH_TEMP', `[GROUP]${id}`, 'crash_backup_object.json')
-          if (fs.existsSync(backup)) object[id] = require(backup)
+          const backupObject = path.join(settings.archiving.tempDir, 'DARAH_TEMP', `[GROUP]${id}`, 'crash_backup_object.json')
+          if (fs.existsSync(backupObject)) object[id] = require(backupObject)
         }
       }
 
@@ -579,9 +588,12 @@ async function loadInstances ({ discord, settings, ui, date, rimraf, fetch, fs, 
           const tempAttachmentsArray = msg.attachments.array()
           for (let ind = 0; ind < tempAttachmentsArray.length; ind++) {
             const attachment = tempAttachmentsArray[ind]
-            attachments.push({ i: `${auxilliaryCounter}-${ind + 1}`, n: channelOptions.information.name ? attachment.filename : undefined, u: channelOptions.channels.id ? attachment.url : undefined })
+            const attachID = backup && backup.crashFileManifest && backup.crashFileManifest.attachments[msg.id] && backup.crashFileManifest.attachments[msg.id][ind] ? backup.crashFileManifest.attachments[msg.id][ind] : `${auxilliaryCounter}-${attachment.filesize}${attachment.id.substr(-4)}-${ind + 1}`
+            attachments.push({ i: attachID, n: channelOptions.information.name ? attachment.filename : undefined, u: channelOptions.channels.id ? attachment.url : undefined })
             if (Object.entries(channelOptions.downloads).map(i => i[1]).filter(Boolean).length > 0) {
-              attachment.id = `${auxilliaryCounter}-${ind + 1}`
+              attachment.id = attachID
+              if (!crashFileManifest.attachments[msg.id]) crashFileManifest.attachments[msg.id] = []
+              if (!crashFileManifest.attachments[msg.id][ind]) crashFileManifest.attachments[msg.id].push(attachment.id)
               promises.push(downloadAttachment(object, { attachment, channel, id }, { fetch, fs, path, log, settings, ui }))
             }
           }
@@ -648,7 +660,9 @@ async function loadInstances ({ discord, settings, ui, date, rimraf, fetch, fs, 
                 object[id].e[object[id].e.findIndex(e => e.i === reaction.emoji.id)] = emoji
               } else object[id].e.push(emoji)
 
-              if (channelOptions.downloads.emojis && (reaction.emoji.url || reaction.emoji.id)) promises.push(downloadEmoji(object, { reaction, id }, { fetch, fs, path, log, settings, ui }))
+              if (channelOptions.downloads.emojis && (reaction.emoji.url || reaction.emoji.id)) {
+                promises.push(downloadEmoji(object, { reaction, id }, { fetch, fs, path, log, settings, ui }))
+              }
             }
             reactions.push({ c: reaction.count, u: reaction.users.size > 0 ? reaction.users.map(i => i.id) : undefined, d: object[id].e.findIndex(i => i.d === reaction.emoji.identifier) })
           }
@@ -696,7 +710,7 @@ async function loadInstances ({ discord, settings, ui, date, rimraf, fetch, fs, 
             object[id].u[object[id].u.findIndex(i => i.i === msg.author.id)] = firstUserMention
           } else object[id].u.push(firstUserMention)
 
-          if (channelOptions.downloads.icons && channelOptions.members.icon && (msg.author.avatarURL || msg.author.displayAvatarURL)) promises.push(downloadUserAvatar(object, { user: msg.author, id }, { fetch, fs, path, log, settings, ui }))
+          if (channelOptions.downloads.icons && channelOptions.members.icon && (msg.author.avatarURL || msg.author.displayAvatarURL) && !object[id].u.find(i => i.i === msg.author.id).retry) promises.push(downloadUserAvatar(object, { user: msg.author, id }, { fetch, fs, path, log, settings, ui }))
         }
 
         let edits
@@ -761,8 +775,8 @@ async function loadInstances ({ discord, settings, ui, date, rimraf, fetch, fs, 
             const i = emojisInContent[index]
             // Check if animated.
             const mID = i.split(':')[2].replace(/[^0-9]/g, '')
-            const emoji = object[id].e.findIndex(e => e.i === mID) > -1 ? object[id].e.findIndex(e => e.i === mID) : undefined
-            if (typeof emoji !== 'number') {
+            const emoji = object[id].e.findIndex(e => e.i === mID)
+            if (emoji === -1) {
               object[id].e.push({
                 i: mID,
                 d: i.replace('<:', '').replace('>', ''),
@@ -775,7 +789,9 @@ async function loadInstances ({ discord, settings, ui, date, rimraf, fetch, fs, 
               })
 
               const theEmoji = object[id].e[object[id].e.findIndex(e => e.i === mID)]
-              if (channelOptions.downloads.emojis && mID) promises.push(downloadEmoji(object, { reaction: { emoji: { url: theEmoji.u, identifier: theEmoji.d } }, id }, { fetch, fs, path, log, settings, ui }))
+              if (channelOptions.downloads.emojis && mID && theEmoji > -1) {
+                promises.push(downloadEmoji(object, { reaction: { emoji: { url: theEmoji.u, identifier: theEmoji.d } }, id }, { fetch, fs, path, log, settings, ui }))
+              }
             }
             msg.content = msg.content.replace(i, `<:${typeof object[id].e.findIndex(e => e.i === mID) === 'number' ? object[id].e.findIndex(e => e.i === mID) : 'undefined-emoji'}:>`)
           }
@@ -817,6 +833,7 @@ async function loadInstances ({ discord, settings, ui, date, rimraf, fetch, fs, 
       async function fetchMessages (channel, before, after) {
         const msgs = await channel.fetchMessages({ limit: 100, before: before, after: after }).then(res => res.size > 0 ? res.array() : [])
         if (msgs.length > 0) {
+          if (stop) return Promise.resolve()
           const msgLast = msgs[msgs.length - 1]
           const msgFirst = msgs[0]
           // Loop through every message.
@@ -847,7 +864,7 @@ async function loadInstances ({ discord, settings, ui, date, rimraf, fetch, fs, 
               })
 
               channelCache[id][channel.id].count++
-              if (channelCache[id][channel.id].lastMsgId ? (Number(msg.id) > Number(channelCache[id][channel.id].lastMsgId)) : true) channelCache[id][channel.id].lastMsgId = msg.id
+              channelCache[id][channel.id].lastMsgId = msg.id
             }
           }
 
@@ -866,9 +883,6 @@ async function loadInstances ({ discord, settings, ui, date, rimraf, fetch, fs, 
             object[id].count.messages += messages.m.length
 
             messages.po = channel.calculatedPosition || 0
-
-            // For crash backup.
-            channelCache[id][channel.id].lastSplitMsg = channelCache[id][channel.id].lastMsgId
 
             promises = [] // Clear
 
@@ -912,9 +926,6 @@ async function loadInstances ({ discord, settings, ui, date, rimraf, fetch, fs, 
             channelCache[id][channel.id].atSplit++
             channelCache[id][channel.id].finished = true
 
-            // For crash backup.
-            channelCache[id][channel.id].lastSplitMsg = channelCache[id][channel.id].lastMsgId
-
             promises = [] // Clear
 
             // Create file.
@@ -930,7 +941,6 @@ async function loadInstances ({ discord, settings, ui, date, rimraf, fetch, fs, 
 
             // Update cache
             channelCache[id][channel.id].finished = true
-            channelCache[id][channel.id].lastSplitMsg = channelCache[id][channel.id].lastMsgId
             object[id].ca = channelCache[id]
 
             promises = [] // Clear
@@ -942,10 +952,12 @@ async function loadInstances ({ discord, settings, ui, date, rimraf, fetch, fs, 
 
       messages.id = channel.id
 
-      // If we're recovering from a backup, use last split message id.
-      const useBackupMsgIDIfExists = (channelCache[id] && channelCache[id][channel.id]) ? channelCache[id][channel.id].lastSplitMsg : null
+      if (backupMessages && backupMessages.id === messages.id) messages = backupMessages
 
-      // If fullArchive is true, take archive from now to beginning.
+      // If we're recovering from a backup, use last message id.
+      const useBackupMsgIDIfExists = (channelCache[id] && channelCache[id][channel.id]) ? channelCache[id][channel.id].lastMsgId : null
+
+      // If fullArchive is true, take archive from now to beginning, otherwise go from then to now.
       const useCacheMsgIDIfAllowed = channelOptions.fullArchive ? null : channelCache[id][channel.id].lastMsgId
       if (!channelCache[id][channel.id].finished) {
         await fetchMessages(channel, useBackupMsgIDIfExists, useBackupMsgIDIfExists ? null : useCacheMsgIDIfAllowed)

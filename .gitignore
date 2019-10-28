@@ -31,3 +31,4 @@ settings.json.bkp
 
 # Crash backup files
 crash_backup.json
+crash_backup_messages.json

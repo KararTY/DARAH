@@ -127,7 +127,7 @@ async function downloadAttachment (object, { attachment, channel, id }, { fetch,
           res.body.pipe(dest)
           dest.on('close', () => {
             // Finally resolve.
-            log({ message: `Completed download for ${type} ${attachment.id}, for ${id}.` }, settings, ui)
+            log({ message: `Completed download for ${type} ${attachment.id}, for channel ${channel.id}.` }, settings, ui)
             Promise.resolve(true)
           })
         }
