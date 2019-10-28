@@ -847,11 +847,11 @@ async function loadInstances ({ discord, settings, ui, date, rimraf, fetch, fs, 
       async function fetchMessages (channel, before, after) {
         const msgs = await channel.fetchMessages({ limit: 100, before: before, after: after }).then(res => res.size > 0 ? res.array() : [])
         if (msgs.length > 0) {
-          if (stop) return Promise.resolve()
           const msgLast = msgs[msgs.length - 1]
           const msgFirst = msgs[0]
           // Loop through every message.
           for (let index = 0; index < msgs.length; index++) {
+            if (stop) break
             const msg = msgs[index]
             if (!msg.system) {
               auxilliaryCounter++
@@ -881,6 +881,8 @@ async function loadInstances ({ discord, settings, ui, date, rimraf, fetch, fs, 
               channelCache[id][channel.id].lastMsgId = msg.id
             }
           }
+
+          if (stop) return Promise.resolve()
 
           if (promises.length > 0) log({ type: 'bar', message: 'Still downloading files...' }, settings, ui)
 
