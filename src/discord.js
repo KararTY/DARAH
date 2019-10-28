@@ -886,6 +886,12 @@ async function loadInstances ({ discord, settings, ui, date, rimraf, fetch, fs, 
 
             promises = [] // Clear
 
+            // Clear crashMessagesBackup
+            if (fs.existsSync(path.join(__dirname, '..', 'crash_backup_message.json'))) {
+              fs.unlinkSync(path.join(__dirname, '..', 'crash_backup_message.json'))
+              backupMessages = undefined
+            }
+
             // Create file.
             await writeFile(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[id].type + id, `[CHANNEL]${channelOptions.channels.name ? (channel.name || channel.recipient.username) : channel.calculatedPosition}(${channel.calculatedPosition || '0'})_${channelCache[id][channel.id].atSplit}.json`), JSON.stringify(messages, null, channelOptions.output.formatted ? channelOptions.output.whiteSpace : 0))
 
@@ -927,6 +933,12 @@ async function loadInstances ({ discord, settings, ui, date, rimraf, fetch, fs, 
             channelCache[id][channel.id].finished = true
 
             promises = [] // Clear
+
+            // Clear crashMessagesBackup
+            if (fs.existsSync(path.join(__dirname, '..', 'crash_backup_message.json'))) {
+              fs.unlinkSync(path.join(__dirname, '..', 'crash_backup_message.json'))
+              backupMessages = undefined
+            }
 
             // Create file.
             await writeFile(path.join(settings.archiving.tempDir, 'DARAH_TEMP', object[id].type + id, `[CHANNEL]${channelOptions.channels.name ? (channel.name || channel.recipient.username) : channel.calculatedPosition}(${channel.calculatedPosition || '0'})_${channelCache[id][channel.id].atSplit}.json`), JSON.stringify(messages, null, channelOptions.output.formatted ? channelOptions.output.whiteSpace : 0))

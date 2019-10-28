@@ -43,7 +43,6 @@ async function compress ({ object, settings, ui, date, fs, path, log }) {
     }
 
     if (fs.existsSync(path.join(__dirname, '..', 'crash_backup.json'))) fs.unlinkSync(path.join(__dirname, '..', 'crash_backup.json'))
-    if (fs.existsSync(path.join(__dirname, '..', 'crash_backup_message.json'))) fs.unlinkSync(path.join(__dirname, '..', 'crash_backup_message.json'))
   }
 
   return Promise.resolve()
