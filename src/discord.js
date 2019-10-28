@@ -28,6 +28,7 @@ let crashFileManifest = {
 }
 
 let stop = false
+let startedStop = false
 
 let messages = {
   m: [],
@@ -40,6 +41,7 @@ const channelName = (channel) => channel.name || (channel.recipient ? channel.re
 // Load in guilds & user DMs
 async function loadInstances ({ discord, settings, ui, date, rimraf, fetch, fs, writeFile, path, log, backup, backupMessages }) {
   async function doABackup () {
+    startedStop = true
     const crashBackupPath = path.join(__dirname, '..', 'crash_backup.json')
 
     let previousBackup
@@ -116,9 +118,16 @@ async function loadInstances ({ discord, settings, ui, date, rimraf, fetch, fs, 
   }
 
   discord.on('error', async (e) => {
+    stop = true
     console.log(e)
-    await doABackup()
-    process.exit()
+    if (!startedStop) {
+      await doABackup()
+      process.exit()
+    }
+  })
+
+  process.on('SIGINT', function () {
+    discord.emit('error', new Error('Received SIGINT'))
   })
 
   const types = [
@@ -204,7 +213,12 @@ async function loadInstances ({ discord, settings, ui, date, rimraf, fetch, fs, 
 
           await start({ channel })
         } catch (e) {
-          stop = true
+          console.log(e)
+          if (!stop) {
+            stop = true
+            await doABackup()
+            process.exit()
+          }
           break
         }
       }
@@ -887,8 +901,8 @@ async function loadInstances ({ discord, settings, ui, date, rimraf, fetch, fs, 
             promises = [] // Clear
 
             // Clear crashMessagesBackup
-            if (fs.existsSync(path.join(__dirname, '..', 'crash_backup_message.json'))) {
-              fs.unlinkSync(path.join(__dirname, '..', 'crash_backup_message.json'))
+            if (backupMessages && channel.id === backupMessages.id && fs.existsSync(path.join(__dirname, '..', 'crash_backup_messages.json'))) {
+              fs.unlinkSync(path.join(__dirname, '..', 'crash_backup_messages.json'))
               backupMessages = undefined
             }
 
@@ -935,8 +949,8 @@ async function loadInstances ({ discord, settings, ui, date, rimraf, fetch, fs, 
             promises = [] // Clear
 
             // Clear crashMessagesBackup
-            if (fs.existsSync(path.join(__dirname, '..', 'crash_backup_message.json'))) {
-              fs.unlinkSync(path.join(__dirname, '..', 'crash_backup_message.json'))
+            if (backupMessages && channel.id === backupMessages.id && fs.existsSync(path.join(__dirname, '..', 'crash_backup_messages.json'))) {
+              fs.unlinkSync(path.join(__dirname, '..', 'crash_backup_messages.json'))
               backupMessages = undefined
             }
 
