@@ -11,12 +11,12 @@
 ### [Want to view your archives? Click here for D.A.R.A.H. Viewer!](https://github.com/kararty/darah-viewer)
 
 ### Prerequisites
-  * NodeJS version >= 11.10.0
+  * Tested on NodeJS version 12.10.0
   * Enough disk space.
 
 ### Contributors
   * [Tonkku107](https://github.com/tonkku107/) - [Website](https://tonkku.me/)
-  * [KararTY](https://github.com/kararty/) - [Website](https://alremahy.com/biz/projects/sarah)
+  * [KararTY](https://github.com/kararty/) - [Website](https://alremahy.com/biz/projects/darah)
 
 ### Contributing
 Fork project & Send a pull request. Use eslint & the provided eslint file, thanks.
