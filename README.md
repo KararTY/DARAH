@@ -14,6 +14,14 @@
   * Tested on NodeJS version 12.10.0
   * Enough disk space.
 
+## Getting started
+  * Make sure Node.js is installed. This script has been tested on Node.js v12.10.0.
+  * `git clone` or **Download ZIP** to a known directory.
+  * Extract folder if compressed before proceeding.
+  * Open up a command-line, Powershell for Windows users, and change current directory to the folder containing the script.
+  * Run `npm install` to install dependencies.
+  * Now type and `node ./initialize.js` or `npm start` and follow the steps being provided to you through the cli.
+
 ### Contributors
   * [Tonkku107](https://github.com/tonkku107/) - [Website](https://tonkku.me/)
   * [KararTY](https://github.com/kararty/) - [Website](https://alremahy.com/biz/projects/darah)
